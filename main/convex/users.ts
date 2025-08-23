@@ -146,3 +146,26 @@ export const getInvoiceById = query({
   },
 });
 
+export const getAppUserById = query({
+  args: { userId: v.id("app_users") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("app_users"),
+      email: v.string(),
+      companyName: v.optional(v.string()),
+      agentMailFrom: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+    return {
+      _id: user._id,
+      email: user.email,
+      companyName: user.companyName,
+      agentMailFrom: user.agentMailFrom,
+    };
+  },
+});
+

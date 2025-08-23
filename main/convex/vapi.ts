@@ -120,6 +120,25 @@ export const vapiWebhook = httpAction(async (ctx, request) => {
               });
             }
           }
+
+          // Send post-call follow-up email via AgentMail
+          try {
+            const callDuration = msg.call?.endedAt && msg.call?.startedAt 
+              ? Math.round((new Date(msg.call.endedAt).getTime() - new Date(msg.call.startedAt).getTime()) / 1000)
+              : msg.duration || 0;
+
+            await ctx.scheduler.runAfter(0, api.email.sendPostCallEmail, {
+              vendorId: metadata.vendorId,
+              callId,
+              callOutcome: msg.endedReason,
+              callDuration
+            });
+
+            console.log(`✅ Scheduled post-call email for vendor ${metadata.vendorId}`);
+          } catch (emailError: any) {
+            console.error("Failed to schedule post-call email:", emailError);
+            // Don't throw - we don't want email failures to break call processing
+          }
         }
         break;
 
