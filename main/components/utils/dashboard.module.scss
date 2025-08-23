@@ -1,0 +1,137 @@
+.wrapper {
+  max-width: 1150px;
+  margin: auto;
+  padding: 2.4rem 2.4rem 6rem 2.4rem;
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  height: 44px;
+  border-bottom: 1px solid var(--background-light);
+}
+
+.tab, .tabActive {
+  position: relative;
+  height: 42px;
+  padding: 0 1.2rem;
+  color: var(--text);
+  background: var(--background-dark);
+  border: 1px solid var(--background-light);
+  border-bottom: none;
+  /* angled sides similar to Chrome tabs */
+  clip-path: polygon(0 100%, 12px 0, calc(100% - 12px) 0, 100% 100%);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+  margin-right: -1px; /* collapse adjoining borders */
+  opacity: 0.75;
+}
+
+.tab:hover { background: var(--background); opacity: 0.9; }
+
+.tabActive {
+  background: var(--background);
+  opacity: 1;
+  z-index: 2;
+  /* visually connect active tab with content area */
+  box-shadow: 0 1px 0 0 var(--background);
+}
+
+.headerActions { display: flex; align-items: center; gap: 0.8rem; position: relative; }
+
+.mockButton { border: 1px solid var(--brand); color: var(--brand); padding: 0.6rem 0.9rem; border-radius: 6px; background: transparent; }
+
+.profile { position: relative; }
+.avatar {
+  width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--background-light);
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
+  color: var(--text); display: grid; place-items: center; font-weight: 700; letter-spacing: 0.2px;
+}
+.menu {
+  position: absolute; top: 46px; right: 0; min-width: 200px; z-index: 10;
+  background: rgba(20,20,20,0.6); border: 1px solid var(--background-light); border-radius: 10px;
+  backdrop-filter: blur(10px); box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+  overflow: hidden;
+}
+.menuHeader { padding: 0.8rem 1rem; font-weight: 600; border-bottom: 1px solid var(--background-light); opacity: 0.9; }
+.menuItem { padding: 0.7rem 1rem; text-align: left; width: 100%; background: transparent; border: none; color: var(--text); cursor: pointer; }
+.menuItem:hover { background: rgba(255,255,255,0.06); }
+
+.sessionBox { display: none; }
+.logout { display: none; }
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.glassFull {
+  margin-top: 0.6rem;
+  min-height: calc(100vh - 200px);
+  width: 100%;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(100,100,100,0.16), rgba(35,35,35,0.30));
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  display: grid; place-items: center;
+  position: relative; overflow: hidden;
+}
+/* Removed glossy white border and highlight */
+
+.column { background: var(--background-dark); border: 1px solid var(--background-light); border-radius: 8px; padding: 1.6rem; }
+
+.dropZone {
+  margin-top: 1rem;
+  min-height: 180px;
+  border: 2px dashed var(--background-light);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; opacity: 0.8;
+}
+
+.dropZoneActive { border-color: var(--brand); opacity: 1; box-shadow: 0 0 0 3px rgba(0, 163, 255, 0.12) inset; }
+
+.controlsRow { display: flex; gap: 1rem; margin-top: 1.2rem; }
+.select { background: var(--background); color: var(--text); border: 1px solid var(--background-light); padding: 0.6rem 1rem; border-radius: 6px; }
+
+.placeholder { margin-top: 1rem; min-height: 240px; background: var(--background); border: 1px dashed var(--background-light); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.glassEmpty {
+  margin-top: 1rem;
+  min-height: 260px;
+  border-radius: 12px;
+  border: 1px solid var(--background-light);
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  backdrop-filter: blur(14px);
+  display: grid; place-items: center;
+}
+.centerControls { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; }
+.uploadTrigger { background: #fff; color: #111; border: none; border-radius: 999px; padding: 0.7rem 1.1rem; cursor: pointer; }
+
+.tableWrap { margin-top: 1rem; overflow: auto; border: 1px solid var(--background-light); border-radius: 8px; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--background-light); text-align: left; }
+.table thead th { position: sticky; top: 0; background: var(--background-dark); }
+.list { margin-top: 1rem; opacity: 0.85; }
+
+.singlePanel { background: var(--background-dark); border: 1px solid var(--background-light); border-radius: 8px; padding: 1.6rem; }
+.fieldRow { display: flex; gap: 0.8rem; margin-top: 1rem; }
+.input { flex: 1; background: var(--background); color: var(--text); border: 1px solid var(--background-light); border-radius: 6px; padding: 0.8rem 1rem; }
+.primary { border: 1px solid var(--brand); color: var(--brand); padding: 0.8rem 1rem; border-radius: 6px; }
+.secondary { border: 1px solid var(--background-light); padding: 0.8rem 1rem; border-radius: 6px; }
+.danger { border: 1px solid #ff6b6b; color: #ff6b6b; padding: 0.8rem 1rem; border-radius: 6px; }
+.helper { opacity: 0.7; margin-top: 0.8rem; }
+
+@media (max-width: 900px) {
+  .columns { grid-template-columns: 1fr; }
+}
+
+

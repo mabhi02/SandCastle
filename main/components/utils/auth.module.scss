@@ -1,0 +1,143 @@
+.authWrapper {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+}
+
+.authMain {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.authContainer {
+  max-width: 520px;
+  margin: 10rem auto 4rem;
+  padding: 3rem;
+  background: var(--background-dark);
+  border: 1px solid var(--background-light);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  position: relative;
+  z-index: 60;
+}
+
+.authTitle {
+  font-size: var(--text-lg);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.logoWrap {
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 1.2rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: black;
+  border-radius: 6px;
+}
+
+.logoImg { width: 100%; height: 100%; object-fit: contain; }
+
+.tabs {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0 0 1.6rem 0;
+}
+.tab, .tabActive { 
+  flex: 1; 
+  text-align: center; 
+  padding: 0.8rem 1.2rem; 
+  border: 1px solid var(--background-light); 
+  border-radius: 6px; 
+}
+.tabActive { border-color: #fff; color: var(--text); }
+
+.tabs {
+  position: relative;
+  border-bottom: none;
+}
+.tabs::after { content: none; }
+.tab, .tabActive {
+  background: rgba(0,0,0,0.3);
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
+  position: relative;
+  z-index: 1;
+}
+.tabActive {
+  background: var(--background);
+  border-bottom-color: transparent;
+  z-index: 2;
+}
+.tabActive::after { content: none; }
+
+.sliderViewport {
+  overflow: hidden;
+}
+
+.sliderTrack {
+  display: flex;
+  width: 200%;
+  transition: transform 0.35s ease-in-out;
+}
+
+.pane {
+  width: 50%;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.6rem;
+}
+
+.input {
+  background: var(--background);
+  border: 1px solid var(--background-light);
+  color: var(--text);
+  padding: 1rem 1.2rem;
+  border-radius: 6px;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid #fff;
+  color: #fff;
+  border-radius: 6px;
+  transition: 0.2s background, 0.2s color, 0.2s border;
+}
+
+.submit:hover { 
+  background: #fff; 
+  color: #000; 
+}
+
+.muted {
+  opacity: 0.7;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.error {
+  color: #ff6b6b;
+  margin-bottom: 1rem;
+}
+
+.cornerSocials {
+  position: fixed;
+  right: 1.6rem;
+  bottom: 1.6rem;
+  z-index: 3;
+}
+
+
