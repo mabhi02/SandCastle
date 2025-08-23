@@ -1,0 +1,151 @@
+{
+  "Sidebar": {
+    "about": "About",
+    "projects": "Team"
+  },
+  "Hero": {
+    "title": "SandCastle",
+    "tagline": "Web Agent",
+    "p1": "Sandcastle keeps your revenue from washing away. From first call to paid, every step is visible, enforced, auditable, and in your browser."
+  },
+  "About": {
+    "section": "About",
+    "p1": "SandCastle turns overdue invoices into cash fast. In under 90 seconds, it places a voice call, sends a secure payment link, and flips an invoice from Overdue to Paid with a clear, auditable trail.",
+    "p2": "Safety and determinism are built-in: the agent operates with explicit guardrails and an allowed-tools list. Every step is traced and state updates happen via transactional Convex mutations—no hidden side effects.",
+    "p3": "Under the hood we use Vapi (voice), AgentMail (agent inbox + email), Autumn to create Stripe test-mode payment links, Convex for reactive state, and an MCP gateway to orchestrate tools. The UI surfaces a live tool trace, policy checks, and status changes in real time.",
+    "links": "Links"
+  },
+  "Projects": { 
+    "section": "Team",
+    "gallery": "Full Gallery",
+
+    "desc1": "A clone of Apple's iPhone 15 Pro website using React.js and TailwindCSS. It highlights the effective use of Three.js and GSAP for 3D and animations.",
+    "modal1": "This is a clone of Apple's iPhone 15 Pro website using React.js and TailwindCSS. It highlights the effective use of GSAP (Greensock Animations) and Three.js for displaying iPhone 15 Pro models in various colors and shapes.",
+
+    "desc2": "Event management platform built on Next.js. This app serves as a hub for showcasing events and features secure payment through Stripe.",
+    "modal2": "Evently is an event management platform, built on Next.js. It serves as a hub for showcasing events, features payment through Stripe, the capability to purchase tickets and manage your own events.",
+
+    "desc3": "Landing page design for a travel agency featuring a modern and minimalist aesthetic, crafted using HTML, CSS, and JavaScript.",
+    "modal3": "Landing page design for a travel agency featuring a modern and minimalist aesthetic, crafted using HTML, CSS, and JavaScript. Enhanced with smooth animations powered by ScrollReveal.js library.",
+
+    "desc4": "Landing page for a sushi restaurant featuring a modern and minimalist aesthetic, crafted using HTML, CSS, and JavaScript.",
+    "modal4": "Landing page design for a sushi restaurant featuring a modern and minimalist aesthetic, crafted using HTML, CSS, and JavaScript. Enhanced with smooth animations powered by ScrollReveal.js library.",
+
+    "desc5": "AI image platform featuring advanced image processing: restoration, recoloring, object removal, generative filling, and background removal.",
+    "modal5": "An AI image SaaS platform with advanced image processing, secure payments and powerful search. Features: restoration, recoloring, object removal, generative filling, and background removal.",
+
+    "desc6": "CarHub presents various car types, showcasing comprehensive information with advanced filtering and pagination support.",
+    "modal6": "CarHub presents various car types, showcasing comprehensive information with advanced filtering and pagination support. Built with Next.js and leveraging its server-side rendering capabilities.",
+
+    "desc7": "3D website powered by Three.js featuring interactive elements. Navigate aboard a small plane and explore a floating island.",
+    "modal7": "This 3D website, built with React and powered by Three.js, features engaging interactive elements. Navigate aboard a small plane to explore a floating island and discover various information. On the contact page, a fox will dynamically react as you fill out the fields!",
+
+    "desc8": "AI platform that enables users to create podcasts with features like text-to-audio conversion, image generation and seamless playback.",
+    "modal8": "A cutting-edge AI SaaS platform that empowers users to create, discover, and enjoy podcasts with advanced features such as text-to-audio conversion using multi-voice AI powered by OpenAI API, podcast thumbnail image generation, and seamless playback. The platform includes secure authentication using Clerk, ensuring a safe and personalized user experience."
+  },
+  "Experience": {
+    "section": "Partners",
+
+    "exp1": "Vapi Voice",
+    "role1": "Voice calls",
+    "date1": "",
+    "loca1": "Outbound calls",
+    "desc1": "Live outbound calls with a tight scripted flow. Barge-in is enabled for natural interruptions. Connects over PSTN or WebRTC and emits call events to the live trace. We surface connect, accept, and hangup as timeline events. The call state drives UI badges and safeguards contact windows.",
+
+    "exp2": "AgentMail Inbox",
+    "role2": "Email delivery",
+    "date2": "",
+    "loca2": "Email",
+    "desc2": "Agent-owned inbox for outbound email and replies. Sends the secure payment link with invoice details. Outbox and status appear in the UI trace. Delivery, open, and reply markers update state so follow-ups stay timely. The email record is captured for audit with redacted addresses.",
+
+    "exp3": "Autumn + Stripe",
+    "role3": "Payment links",
+    "date3": "",
+    "loca3": "Payments",
+    "desc3": "Creates a Stripe test mode payment link for the agreed amount. Returns the link to email and posts a webhook on success. A reconcile button is available if the webhook is slow. The link includes amount, memo, and expiration for clarity. Webhook results are validated before state changes.",
+
+    "exp4": "Convex State",
+    "role4": "State engine",
+    "date4": "",
+    "loca4": "Reactive state",
+    "desc4": "Single source of truth for invoices and runs. State changes occur through transactional mutations and update the UI in real time. Every transition is stored for audit. Each mutation records who, what, and when with a transaction id. Counters, badges, and reset actions remain consistent after reloads.",
+
+    "exp5": "MCP Gateway",
+    "role5": "Tool orchestration",
+    "date5": "",
+    "loca5": "Orchestration",
+    "desc5": "Registers whitelisted tools and enforces guardrails at runtime. Shapes human readable traces of each tool call and result. Blocks out of policy actions before execution. Every request passes policy checks with clear reasons when blocked. Inputs and outputs are normalized for readable, exportable traces."
+  },
+  
+  "Contact": {
+    "section": "Contact",
+    "p1": "Sandcastle turns overdue invoices into cash fast; visible, enforced, auditable, and in your browser.",
+    "p2": "Ready to try it?",
+    "p3": ""
+  },
+  "Footer": {
+    "copyright": "All rights reserved.",
+    "privacy": "Privacy",
+    "legalNotice": "Legal Notice"
+  },
+  "Privacy": {
+    "header": "Privacy",
+    "date1": "Effective Date:",
+    "date2": "December 1, 2024",
+    "introTitle": "Introduction",
+    "introWelcome": "Welcome to ",
+    "introBody": "Your privacy is important to us. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website. Please read this policy carefully to understand our practices regarding your personal data and how we handle it.",
+    "infoTitle": "Information We Collect",
+    "personalTitle": "Personal Information",
+    "personalBody": "We do not collect personal information unless you choose to contact us. If you send us an email, we may collect the following information:",
+    "personalList1": "Your email address",
+    "personalList2": "Any other details you include in your email",
+    "nonPersonalTitle": "Non-Personal Information",
+    "nonPersonalBody": "We do not automatically collect non-personal information such as IP addresses, browser details, or usage data.",
+    "usageTitle": "How We Use Your Information",
+    "usageBody": "If you contact us via email, we use the information you provide solely to:",
+    "usageList1": "Respond to your inquiries.",
+    "usageList2": "Provide any requested assistance or information.",
+    "usageNote": "We do not use your information for marketing purposes or share it with third parties.",
+    "sharingTitle": "Sharing Your Information",
+    "sharingBody": "We do not sell, rent, or share your personal data with any third parties. Your information is used exclusively for responding to your inquiries.",
+    "cookiesTitle": "Cookies and Tracking Technologies",
+    "cookiesBody": "We do not use cookies or other tracking technologies on our website.",
+    "retentionTitle": "Data Retention",
+    "retentionBody": "We retain the information you provide in your emails only as long as necessary to respond to your inquiries. Once the information is no longer needed, it is securely deleted.",
+    "rightsTitle": "Your Rights",
+    "rightsBody": "You have the right to:",
+    "rightsList1": "Request access to any information you have provided to us.",
+    "rightsList2": "Request the deletion of your information from our records.",
+    "changesTitle": "Changes to This Privacy Policy",
+    "changesBody": "We may update this Privacy Policy from time to time. Any changes will be reflected on this page with an updated revision date.",
+    "contactTitle": "Contact Us",
+    "contactBody": "If you have any questions or concerns about this Privacy Policy or our practices, please contact us at:",
+    "contactEmail": "SandCastleYC@gmail.com"
+  },
+  "LegalNotice": {
+    "header": "Legal Notice",
+    "responsibleTitle": "Responsible for the Website",
+    "companyName": "Company Name:",
+    "legalForm1": "Legal Form:",
+    "legalForm2": "Entreprise individuelle (EI)",
+    "headquarters": "Headquarters Address:",
+    "registrationNumber": "Registration Number:",
+    "email": "Email:",
+    "phone": "Phone:",
+    "hostingTitle": "Hosting",
+    "hostingProvider": "Hosting Provider:",
+    "hostingAddress": "Address:",
+    "hostingPhone": "Phone:",
+    "hostingEmail": "Email:",
+    "intellectualTitle": "Intellectual Property",
+    "intellectualBody": "All content on this site (texts, images, logos, etc.) is the exclusive property of Mr. Franck Vukelic, unless stated otherwise. Reproduction, distribution, or use without prior written permission is prohibited and may result in legal action.",
+    "responsibilityTitle": "Responsibilities",
+    "responsibilityBody1": "The site owner is not responsible for damages resulting from the use of this site, including interruptions or bugs.",
+    "responsibilityBody2": "External links on this site do not imply any responsibility for their content.",
+    "contactTitle": "Contact",
+    "contactBody": "For any questions or requests, contact us at:",
+    "internationalTitle": "International",
+    "internationalBody": "This website is operated by Mr. Franck Vukelic, based in France. By using this site, you agree to comply with the applicable laws of France."
+  }
+}

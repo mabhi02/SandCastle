@@ -1,0 +1,52 @@
+import { useTranslations } from "next-intl";
+import { AiOutlineArrowRight } from "react-icons/ai";
+import { Socials } from "@/components/nav/Socials";
+import { Reveal } from "@/components/utils/Reveal";
+import { SectionHeader } from "@/components/utils/SectionHeader";
+import { Stats } from "./Stats";
+import styles from "./about.module.scss";
+
+export const About = () => {
+  const t = useTranslations("About");
+  const p1 = t("p1");
+  const first = p1.charAt(0);
+  const rest = p1.slice(1);
+
+  return (
+    <section id="about" className="section-wrapper">
+      <SectionHeader title={t("section")} dir="l" />
+      <div className={styles.about}>
+        <div>
+          <Reveal>
+            <p className={styles.aboutText}>
+              <span className={styles.dropcapBox} aria-hidden="true">
+                <span className={styles.dropcapLetter}>{first}</span>
+              </span>
+              {rest}
+            </p>
+          </Reveal>
+          <Reveal>
+            <p className={styles.aboutText}>
+            {t("p2")}
+            </p>
+          </Reveal>
+          <Reveal>
+            <p className={styles.aboutText}>
+            {t("p3")}
+            </p>
+          </Reveal>
+          <Reveal>
+            <div className={styles.links}>
+              <div className={styles.linksText}>
+                <span>{t("links")}</span>
+                <AiOutlineArrowRight />
+              </div>
+              <Socials />
+            </div>
+          </Reveal>
+        </div>
+        <Stats />
+      </div>
+    </section>
+  );
+};

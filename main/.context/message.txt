@@ -1,0 +1,688 @@
+Perfect. Here’s a decisive, eight‑hour plan to get **AR Collections Agent** demo‑ready with one invoice moving **Overdue → Paid** live in under 90 seconds, while clearly signaling **job replacement**, **MCP tool use**, **reactive state**, and **determinism/safety**.
+
+I’ll keep this at the level of **planning, flow, responsibilities, milestones, and run‑of‑show**—no code or schemas yet.
+
+---
+
+## North Star (what the judges will remember)
+
+* **“Inbox → Cash.”** In 90 seconds: call + email + payment link + state flips to **Paid** with a full audit trail.
+* **“This replaces an AR clerk’s weekly chase.”** Say it verbatim.
+* **Sponsor alignment on screen:** Vapi (voice), AgentMail (agent inbox), Autumn→Stripe link (test mode), Convex (reactive state + transactional updates), MCP trace visible. Browser automation/Kernel optional flex.
+* **Determinism & safety:** Allowed‑tools list, guardrails, transactional Convex mutations, replayable trace.
+
+---
+
+## Scope boundaries for tonight (MVP)
+
+* **Exact outcome:** 1 overdue invoice → **PaidFull**. (Have **PaidPartial** and **PromiseToPay** as “B‑sides” if network/payment latency spikes.)
+* **Channels:** Voice (Vapi) + Email (AgentMail).
+* **Payments:** Autumn in Stripe test mode. No real money, no live PII.
+* **Data:** Tiny seeded dataset (3 customers; we’ll use one for the live run).
+* **Negotiation:** Treated as **tiny state machine** (you’ve got this handled). We wire it to tool calls; no free‑chat on stage.
+* **Auth:** No OAuth. All identities are agent‑owned (AgentMail inbox, Vapi number). Payment link in Stripe test mode.
+* **No orchestrator:** Single capable agent invoking MCP tools against a deterministic backend.
+
+---
+
+## System at a glance (what we’ll demo without showing code)
+
+**Views:**
+
+1. **Overdue Board**: counters (“Overdue / In‑Progress / Paid”), list of customers/invoices.
+2. **Run Panel (right side)**: live **Trace** (MCP tool calls + parameters), **Guardrails** (allowed tools), **State** (current state with green ticks), **Audit** button (full JSON trace).
+3. **Inbox Panel** (AgentMail) showing the outbound email with payment link.
+
+**Back‑of‑house (quietly running):**
+
+* **Convex**: single source of truth; every state transition is a transaction.
+* **Dedalus**: MCP gateway wiring **vapi**, **agentmail**, **autumn**, **convex** (+ **browser‑use** optional).
+* **Vapi**: single outbound number with a scripted, barge‑in‑capable flow.
+* **Autumn**: create test‑mode Stripe payment link; webhook (or poll) flips status.
+* **AgentMail**: agent’s own inbox to send the link and receive replies.
+
+---
+
+## Voice micro‑state machine (for clarity on narrative & QA)
+
+(You said negotiation is handled; we still anchor the flow explicitly.)
+
+**States:** Intro → Verify → Propose → Negotiate → Confirm → Close
+**Primary Outcome (for demo):** **PaidFull**
+**Alternates prepared:** **PaidPartial**, **PromiseToPay**, **Unreachable** (fallback email), **Dispute**/**NotResponsible** (we will not steer here on stage).
+
+**Trigger points into tools:**
+
+* **Verify**: if verified name + invoice ID/amount, proceed; else fallback email only.
+* **Confirm**: on acceptance, call **Autumn.createPaymentLink** (idempotent).
+* **Close**: **AgentMail.send** with link; display trace; open link → complete payment (test card).
+* **Post‑payment**: receive webhook or button to **“Mark paid (webhook received)”** if latency bites.
+
+---
+
+## Safety & determinism we will show explicitly
+
+* **Guardrails card**: Allowed tools (vapi.call, agentmail.send, autumn.createPaymentLink, convex.transition). “Purchases: disabled”, “Max attempts/week: 2”, “Call window: demo mode.”
+* **Trace**: Every tool call listed with timestamp and safe, human‑readable params.
+* **Transactional state**: A badge flips only after a Convex mutation (“Paid” appears with `txid`), never directly by the LLM.
+* **Replayability**: “Export trace” button (JSON) for auditors.
+
+---
+
+## Hour‑by‑hour plan (8 hours total)
+
+### **H0 → H+1 (11pm–12am): Alignment & dry scaffolding**
+
+* **Decide the demo path**: target **PaidFull**. Keep **PaidPartial** + **PromiseToPay** as live toggles in UI (hidden “force path” if voice stalls).
+* **Data freeze**: prepare 3 fake customers. Pick “Acme Co.” as the live one (amount \$1280, due 30 days ago).
+* **Roles** (suggested):
+
+  * **Lead / Demo** (you): run‑of‑show owner, narration, judge Q\&A.
+  * **Voice owner**: Vapi flow + fallback routing; stage audio.
+  * **Payments owner**: Autumn/Stripe test mode + webhook/poll fallback; local manual “simulate webhook” button.
+  * **UI/State owner**: Convex state wiring; counts, trace, guardrails, “Reset demo.”
+  * **MCP owner**: Dedalus wiring; ensure tools appear in the trace with nice labels.
+
+### **H+1 → H+3 (12am–2am): Tool wiring (happy path only)**
+
+* **MCP gateway**: Register tools with human‑friendly names. Ensure **Trace** shows: “Vapi.call( +1‑xxx ) → Autumn.createPaymentLink(\$1280) → AgentMail.send(to: [ar@acme.example](mailto:ar@acme.example)) → Convex.transition( PaidFull ).”
+* **Vapi**:
+
+  * Provision 1 outbound number.
+  * Script tight flow: 5 lines max to PaidFull; barge‑in enabled; short pauses (set 0.2–0.4s).
+  * Destination: teammate’s phone (consenting “customer”) near the stage audio or WebRTC to laptop.
+  * **Stage audio**: confirm how judges will hear the call (laptop speakers or small external speaker).
+* **Autumn**:
+
+  * Test keys; endpoint to create **Payment Link** for amount + memo (Invoice #, Acme Co.).
+  * Confirm the link loads instantly in test mode; record the expected webhook/poll response shape.
+  * **Manual “simulate webhook”** UI button (admin‑only) in case network chokes.
+* **AgentMail**:
+
+  * Create agent inbox (e.g., **collections\@agentmail**).
+  * Template: brief, professional, includes the Autumn link, invoice details, and “paid will auto‑reflect in the portal.”
+
+### **H+3 → H+5 (2am–4am): UI that makes the story obvious**
+
+* **Overdue board**: 3 cards, one highlighted “Acme Co.” with an **Overdue** badge. Counters at top.
+* **Run panel**: split vertically → **Trace** (top), **Guardrails** (right), **State path** (bottom). Each trace row clickable to show params.
+* **Big button**: “Start Collections Run.” Clicking:
+
+  1. Highlights Acme → sets status **In‑Progress**.
+  2. Pops **Guardrails** card.
+  3. Streams **Trace** events live.
+* **Inbox teaser**: small panel that shows the sent email in the agent’s inbox (subject + link). Clicking opens it.
+* **Reset** button: clears demo back to Overdue.
+* **Polish**: timestamps in trace, a green confetti micro‑burst when “Paid” lands.
+
+### **H+5 → H+6.5 (4am–5:30am): Rehearsals & failure drills**
+
+* **Dry‑run 1 (full)**: Voice → Payment link → Pay with Stripe test card → Webhook flips to **Paid**, counters update. Aim for **60–75 seconds**.
+* **Dry‑run 2 (latency)**: If webhook >10s, use **simulate** button at **T+8s**; update “webhook pending” badge to “reconciled.”
+* **Dry‑run 3 (voice fails)**: Skip to “Unreachable” → auto‑send email → click link → pay → state flips.
+* **Dry‑run 4 (wifi blip)**: Load link on phone hotspot; if still bad, click **simulate paid** after showing link.
+
+### **H+6.5 → H+7.5 (5:30am–6:30am): Demo script & visuals**
+
+* **Narration (90 seconds total)** (you’ll memorize this):
+
+  1. *“This replaces an AR clerk’s weekly chase.”*
+  2. Point to **Guardrails**: *“Allowed tools only, no surprises.”*
+  3. Click **Start Collections Run** → call audio begins.
+  4. When “Confirmed”, say: *“Watch the toolgraph: payment link created → email sent → state flips only on a transaction.”*
+  5. Open email → click link → pay (test card) → back to dashboard shows **Paid**.
+  6. *“Inbox → Cash. MCP tools, reactive state, transactional audit—job replaced.”*
+* **Slide (one‑pager)** behind the demo: logo + four logos (**Vapi / AgentMail / Autumn / Convex**) + a tiny architecture diagram.
+* **Q\&A crib sheet**: prepared answers (see “Judge landmines” below).
+
+### **H+7.5 → H+8 (6:30am–7:00am): Submission & buffer**
+
+* **Submission assets**: 45–60s screen recording of the run, a diagram image, and a README (how to reproduce with sponsor credits).
+* **Backup laptop/phone** with everything logged in.
+* **Hydrate & 10‑min rest.**
+
+---
+
+## Run‑of‑show details (what happens on stage)
+
+1. **Pre‑show**: you’re on the **Overdue board**. “Acme Co., \$1,280, 30 days overdue.”
+2. **Guardrails flash** (2 seconds): “Allowed tools; no purchases; attempts/week: 2.”
+3. **Start Collections Run** → voice call begins (we hear it).
+4. **Trace** updates: `Vapi.call → Autumn.createPaymentLink($1280) → AgentMail.send` (each with a ✅ when done).
+5. **Open Inbox** → open the email → click **Payment Link**.
+6. **Payment page** (test mode): enter test card quickly; submit.
+7. **Dashboard**: counter flips; “Acme Co.” row turns **Paid**; spark of confetti.
+8. **One line close**: *“We turned an overdue invoice into cash in under 90 seconds, with a deterministic, auditable agent. This is your AR clerk, automated.”*
+
+---
+
+## Fallbacks (decide now, so you don’t hesitate)
+
+* **Voice flaky?** Immediately: *“Customer didn’t pick up—switching to email.”* The agent emails the link; you click and pay.
+* **Webhook slow?** After 8 seconds, click **“Reconcile now”** (admin simulate). Speak to it: *“We reconcile webhooks periodically; reconciling now.”*
+* **Payment link down?** Show the email with the link visible; click **“Simulate paid”** after saying: *“Stripe test mode is lagging; here’s the expected webhook result.”*
+* **Network dead?** Play the **45‑second screen recording** and narrate live; end on the actual dashboard showing Paid.
+
+---
+
+## “Don’t‑break‑this” checklist
+
+* **Audio**: confirm the room’s output; test call volume; keep a small external speaker as backup.
+* **Browser**: disable all extensions; set 100% zoom; pre‑open tabs in order; hotkeys off.
+* **Credentials**: everything logged in; keep a notepad with the test card number & test email.
+* **Reset path**: one click to “Reset demo sta[<43;30;2M[<35;31;2Mte” between rehearsals.
+* **Time**: you should hit **Paid** by T+60s; never exceed **T+90s**.
+
+---
+
+## What each person does tonight (if you have 3–5 people)
+
+**Lead / Demo (you)**
+
+* Finalize narration; rehearse with timers.
+* Own **Guardrails** copy and the closing line (“replaces AR clerk”).
+* Coordinate fallbacks; keep the simulate‑paid button location in muscle memory.
+
+**Voice owner**
+
+* Configure Vapi number, script, barge‑in; test PSTN/WebRTC; confirm audio path.
+* Keep a teammate’s phone as the receiving “customer.”
+* Build a “switch to email” branch if call fails within 5s.
+
+**Payments owner**
+
+* Autumn keys; ensure link opens instantly; prep test card info.
+* Wire webhook or polling; add “simulate paid” admin action.
+* Validate the memo includes invoice ID/amount.
+
+**UI/State owner**
+
+* Counters, highlights, trace list, guardrails card, **Paid** confetti.
+* Reset button; “webhook pending” badge; reconcile now button.
+* Polished “Audit” modal with readable trace lines.
+
+**MCP owner**
+
+* Dedalus registry; human‑readable tool names; trace JSON shaping.
+* Confirm that only allowed tools are accessible during the run.
+
+*(If you’re a smaller team, collapse MCP+UI under one person.)*
+
+---
+
+## Judge landmines (and your crisp answers)
+
+* **“Isn’t this just a wrapper?”**
+  *We’re not a wrapper; we’re a vertical agent that **owns AR**, with a typed, deterministic backend. The agent can’t mutate state outside of transactional functions; every action is traced and replayable. That’s job replacement, not a chat ma[<35;32;3M[<35;33;3Mcro.*
+
+* **“How’s this better than a call center?”**
+  *Latency and consistency: the agent follows a micro‑state machine with clear guardrails; it never forgets follow‑ups, works 24/7, and integrates payments inline. Humans handle edge disputes; the agent handles 80% of the volume.*
+
+* **“What breaks in the wild?”**
+  *Bad numbers, disputes, and portals. We handle those with outcome branches (**Unreachable**, **Dispute**) and put humans in the loop. Everything else stays automated—and audited.*
+
+* **“Why these tools?”**
+  *MCP lets us compose best‑in‑class tools: Vapi for voice, AgentMail for inbox, Autumn for payments, Convex for state. Clean surfaces, clean trace.*
+
+* **“What’s next?”**
+  *Escalation cadence, multi‑channel sequences, promise‑to‑pay reminde[<35;34;4Mrs, portal scraping via Kernel, and portfolio analytics (recovery rate, days‑sales‑outstanding).*
+
+---
+
+## Submission assets (lightweight)
+
+* **60‑sec video**: Overdue → call → link → Paid.
+* **Diagram**: tiny toolgraph and dataflow.
+* **README**: 1‑pager “How it works” + sponsor credits + safety/guardrails.
+* **Live URL**: with a demo reset route.
+
+---
+
+## Final advice for the room
+
+* Keep the **trace** front‑and‑center—judges love seeing tool calls roll in with parameters.
+* Say the **job‑replacement** line confidently.
+* Don’t dwell on scheduling or generality. We’re vertical; we collect cash.
+* Hit **Paid** within **60–75 seconds** if at all possible; you’ll feel the room lean in.
+
+If you want, after this planning pass I can write the **exact UI copy** f[<35;35;5Mor guardrails, trace rows, email template, and the 90‑sec narration so you can paste them in verbatim.
+
+
+---
+# Demo
+Fantastic choice. Here’s a **tight, judge‑magnetic demo** for the AR Collections Agent that is fast, reliable, and shows undeniable value (“inbox → cash”) while highlighting MCP, real‑time state, and voice latency.
+
+---
+
+## What “best” looks like (success criteria)
+
+* **A single, valuable outcome live on stage:** one overdue invoice goes from **Overdue → Paid** in under **90 seconds**.
+* **Clear job replacement:** you explicitly say “this replaces an AR clerk’s weekly chase.”
+* **Sponsor‑aligned tech on screen:** MCP tool calls (Browser automation optional), **voice** (Vapi), **agent inbox** (AgentMail), **payment link** (Autumn/Stripe test mode), **reactive state** (Convex).
+* **Determinism & safety:** visible guardrails, transactional state updates, full trace/audit.
+
+---
+
+## 4‑minute run‑of‑show (tight script + visuals)
+
+**0:00 – 0:20 · Hook**
+
+* You (confident, brisk):
+  “Every founder wastes Friday afternoons chasing invoices. Our **AR Collections Agent** does it for you: it **calls**, **emails**, sends a **payment link**, and updates your books. Watch **Overdue → Paid** happen live.”
+
+**0:20 – 0:40 · Zero‑state**
+
+* Show a clean dashboard:
+
+  * Counters: **Overdue: 6 · In‑Progress: 0 · Paid: 0**
+  * 3‑column board: Overdue / In‑Progress / Paid
+  * A small “MCP Tools active” badge (Voice, AgentMail, Payments, Convex)
+  * Click an invoice row (e.g., “Acme Co — \$1,240 — 21 days late”) → side panel opens with **Plan**.
+
+**0:40 – 1:00 · Plan & guardrails**
+
+* Plan panel shows:
+
+  * Channel order: **Voice → Email** (fallbacks if no answer)
+  * Guardrails: “Max 2 attempts/week; identify as AR team; **never** take card over phone; only send secure link”
+  * “Tone: cordial → firm if >30 days”
+  * Button: **Call now**
+* You (one line):
+  “Plans are compiled and stored; guardrails make it safe and repeatable.”
+
+**1:00 – 2:05 · Live call (the ‘wow’ moment)**
+
+* Click **Call now** (speaker volume up).
+  Agent: “Hi, this is the AR team at **YourCo** calling about invoice 1043 for **\$1,240**, due July 31. Can you take care of it today?”
+  Human (your teammate in the audience): “I can do **\$600 today**, **rest Friday**.”
+  Agent: “Great. I’ll send a secure link for **\$600** now and schedule the **\$640** balance for Friday. Shall I email it to **[payables@acme.test](mailto:payables@acme.test)**?”
+  Human: “Yes.”
+  Agent: “Thanks! I’ll text a confirmation too. Bye.”
+
+* On the dashboard, a **latency badge** (ms) ticks during the call; the **timeline** streams events live:
+
+  * `CALL_CONNECTED`
+  * `NEGOTIATED_PARTIAL_PAYMENT (600 today, 640 Friday)`
+  * `CREATE_PAYMENT_LINK(600)`
+  * `SEND_EMAIL(invoice_1043_link)`
+
+**2:05 – 2:40 · Payment & state flip**
+
+* You open the **AgentMail** outbox item (agent‑owned address) showing the email with the payment button.
+* On a side screen (or same), click the **test payment** link (Stripe test mode) → success page appears.
+* Back on the dashboard, counters animate: **Overdue: 5 · In‑Progress: 1 · Paid: 1**; the card moves to **Paid** with a badge “\$600 today; \$640 scheduled”.
+
+**2:40 – 3:20 · Auditability & scheduling**
+
+* Click **Trace**:
+
+  * Show **MCP tool calls** with inputs/outputs (redact PII): Voice tool, Payment tool, AgentMail tool.
+  * Show **Convex** state mutation logs (“Notified → PromiseToPay → PartialPaid → Paid(Partial)”).
+* Toggle **Auto‑follow‑up Friday 10am** (schedule created).
+* One line for Jared:
+  “This is a **job‑replacing vertical agent**—collections done, audit‑safe, schedulable.”
+
+**3:20 – 4:00 · Close**
+
+* Click **Blueprint** tab to show the saved playbook (tools, tone, guardrails).
+* Final line:
+  “In 24 hours we shipped an AR agent that turns **inbox → cash** with live voice, secure payments, and deterministic state. It’s not a prompt—it’s a **blueprint** you run every week.”
+
+---
+
+## Preparation (so it never breaks on stage)
+
+**People & devices**
+
+* One teammate as the “customer” with a charged phone, in a quiet corner (or outside the room).
+* Laptop on ethernet if possible; external speaker (or stage audio) for the call.
+
+**Seed data (CSV)**
+
+```
+customer,contact_email,contact_phone,invoice_id,amount_due,due_date,days_late,notes
+Acme Co,payables@acme.test,+1-415-555-0199,1043,1240,2025-07-31,21,Good payer; prefers partials
+Bravo LLC,ar@bravo.test,+1-415-555-0123,1044,980,2025-08-01,20,Ask for Friday
+...
+```
+
+**Accounts & config**
+
+* **Voice:** provision a Vapi number; disable voicemail fallback; enable barge‑in; set initial prompt & slots (amount, dates, email).
+* **Email:** create an **AgentMail** inbox (e.g., [ar@yourco.agent](mailto:ar@yourco.agent)).
+* **Payments:** set Autumn/Stripe **test mode**; pre‑configure product/price; webhooks to mark `PartialPaid` or `Paid`.
+* **State:** Convex project seeded with tables: `customers`, `invoices`, `attempts`, `payments`, `promises`. Basic transactional functions for state transitions.
+* **Toggle “Simulate”:** a top‑right switch that swaps the voice/payment tools for a simulator if Wi‑Fi melts (pre‑recorded audio + local webhook).
+
+**UI**
+
+* **Top bar:** counters + latency badge.
+* **Left:** Kanban columns.
+* **Right drawer (selected invoice):** Plan/Guardrails, Call button, Timeline (streaming), Trace (MCP), Email preview.
+* **Status chips:** Overdue (red), In‑Progress (amber), Paid (green).
+
+---
+
+## Exact demo lines (memorize these)
+
+* “We’re automating AR—not assisting it. **This replaces the weekly clerk work.**”
+* “Everything you see is **tool‑backed via MCP**; every step is **audited** and **transactional**.”
+* “We never take card details by phone; we only send **secure links**; **guardrails** enforce policy.”
+* “Note the **reactive UI**—the board flips the instant the payment posts.”
+* “This is **not** a chat transcript. It’s a **versioned blueprint** you can run, fork, and schedule.”
+
+---
+
+## Fallback decision tree (two clicks, no panic)
+
+1. **Call doesn’t connect (10s):**
+
+   * Flip **Simulate**. Press **Play prerecorded call** (clean, the same dialog). Continue the demo; timeline shows tool events as if live.
+
+2. **Payment link blocked / network shaky (10s):**
+
+   * Click **Simulate payment** → triggers the same webhook → state flips to Paid; narrate “Stripe test mode; live in the booth after.”
+
+3. **Email provider lagging:**
+
+   * Show **AgentMail outbox** record and the **link preview** inside the UI; still click the link from the preview.
+
+4. **General meltdown:**
+
+   * Run the **90‑second screen recording** of a complete run; talk over it and then switch back to UI for Q\&A.
+
+---
+
+## Micro‑features that sell to these judges (add if time permits)
+
+* **Latency chip** during the call (e.g., “voice RTT: 420 ms”) to delight the voice judge.
+* **Escalation rule** demo: if >30 days late → tone shifts + email CC changes.
+* **Preferences memory:** “Acme prefers calls after 10am PT” auto‑applied to scheduling.
+* **One‑click “Pay full” vs “Partial”** in the email template; agent adapts copy accordingly.
+* **Audit export** (JSON or CSV) of the run (inputs/outputs/trace).
+
+---
+
+## What to hand in with the demo (submission package)
+
+* **Live URL** with seeded demo data + Simulate toggle.
+* **90‑second capture video** of a perfect run.
+* **README**: architecture diagram, tool list, and one paragraph on determinism/guardrails.
+* **Appendix**: blueprint JSON (tools, guardrails, tone), plus a single screenshot of the MCP trace.
+
+---
+
+If you want me to, I can also give you:
+
+* the blueprint fields to persist,
+* the minimal Convex schema (tables + transitions),
+* a concise voice prompt/call‑flow for Vapi,
+* and the email templates (subject/body) tuned to be cordial‑then‑firm.
+
+But the plan above is the **best possible** 4‑minute demo: one click, one call, one payment, **job replaced**—and everything on screen is auditable, reactive, and MCP‑powered.
+
+
+---
+## negotiation:
+Short version: **Yes—handle negotiation and guardrails explicitly.** It makes the agent look *professional, safe, and production‑ready*, which is exactly what these judges reward. You don’t need full regulatory coverage for a hackathon, but you should implement a **minimal, visible policy layer** that (1) shapes negotiation behavior, (2) blocks risky actions, and (3) leaves an auditable trail.
+
+Below is a complete, copy‑pasteable spec: conversation flow, policy/guardrails, tool contracts, and the exact Vapi call design.
+
+---
+
+## A. What the negotiation *is* (behavioral blueprint)
+
+Think of negotiation as a tiny state machine with a rubric, not free‑chat.
+
+**States:** `Intro → Verify → Propose → Negotiate → Confirm → Close`
+**Outcomes:** `PaidFull | PaidPartial | PromiseToPay | Dispute | NotResponsible | Unreachable`
+
+**Rubric (laddered):**
+
+1. **Intro + identity & purpose**
+
+   * “Hi, this is **<AgentName>** with **<YourCo AR>**. Calling about invoice **#1043** for **\$1,240**, due **July 31**.”
+
+2. **Verify**
+
+   * “Am I speaking with someone who can handle payment for **Acme Co**?”
+   * If not responsible → collect responsible contact → **Close**.
+
+3. **Propose (default ask)**
+
+   * “Can you take care of the full **\$1,240** today?”
+   * If **yes** → **Confirm** (email for secure link) → **Close** (PaidFull after link).
+
+4. **Negotiate (bounded offers)**
+
+   * If **no**, ask constraints: “What’s feasible today?”
+   * Offer **bounded options** from policy:
+
+     * **Partial today ≥ `minPartialPct`** (e.g., ≥ 40%) + remainder by **`maxDaysToSettle`** (e.g., 14 days).
+     * Or **dated PromiseToPay** if zero today is allowed by policy and **daysLate < threshold**.
+   * If customer proposes terms, **validate** against policy; if out‑of‑bounds → counter within bounds or **escalate to human**.
+
+5. **Confirm**
+
+   * Recap exact plan: “Confirming: **\$600 today** by secure link, **\$640 Friday Aug 29** by follow‑up link. Email to **[payables@acme.test](mailto:payables@acme.test)**—is that right?”
+   * Never collect card details over phone. Always send link.
+
+6. **Close**
+
+   * “Thanks. Sending the secure link now. You’ll also get a confirmation email. Have a great day.”
+
+**Fallbacks/branches to handle cleanly:**
+
+* **Already paid:** apologize, request proof (screenshot or remittance), mark `UnderReview`, escalate.
+* **Dispute amount/service:** stop negotiating money; mark `Dispute`, escalate to human.
+* **Not the right person:** capture new contact; schedule call; mark `Reassign`.
+* **Busy:** schedule a specific callback time; mark `Callback`.
+* **No answer / voicemail:** one concise voicemail + email; increment attempt counter; respect frequency guardrail.
+
+---
+
+## B. Guardrails you **should** handle (hackathon‑minimal, high‑impact)
+
+You’re not doing legal advice here; you’re showing you thought about **safety**. Implement these visibly:
+
+1. **Identity & transparency** – always state you’re **<YourCo> AR**, never misrepresent.
+2. **No card numbers on calls** – only **secure payment links**; redact any volunteered sensitive info.
+3. **Contact windows** – call only between **08:00–21:00 local** (override for demo with a “demo mode” toggle).
+4. **Attempt frequency** – max **2 attempts/week** per contact; honor **do‑not‑call** flags.
+5. **Tone & language** – cordial → firm after **`firmDaysLate`**; never threaten or imply legal action.
+6. **Escalation conditions** – disputes, fraud suspicion, out‑of‑policy requests, or repeated refusals.
+7. **PII minimization** – confirm email verbally, don’t read out addresses; mask in logs.
+8. **Audit trail** – log every tool call and state transition; store transcripts and artifacts.
+9. **Opt‑out** – if asked not to call, mark `DNC` immediately and switch to email‑only or cease contact per policy.
+10. **Partial payment policy** – hard limits (`minPartialPct`, `maxInstallments`, `maxDaysToSettle`) enforced server‑side.
+
+These are easy to *show* in the UI as a “Policy” card and to enforce programmatically.
+
+---
+
+## C. Where guardrails live (three enforcement layers)
+
+1. **Prompt‑level constraints (voice agent “system” prompt):**
+   Describe role, tone, and *hard rules it must not break* (no card collection, offer bounds, escalation triggers).
+
+2. **Tool‑gating (capabilities):**
+   The only way to take action is via whitelisted tools: `createPaymentLink`, `sendEmail`, `scheduleFollowUp`, `updateInvoiceStatus`. If a tool isn’t exposed, the agent simply can’t do dangerous things.
+
+3. **Runtime policy check (server):**
+   Every tool call goes through `Policy.check(request, customerContext)` before executing. If it violates rules (time window, frequency, amounts), the server returns a *policy error*; the agent must offer a compliant alternative or escalate.
+
+---
+
+## D. Concrete “Policy DSL” (editable in UI)
+
+Keep it simple and typed. Example:
+
+```yaml
+name: default_ar_policy_v1
+contact_window:
+  start_local: "08:00"
+  end_local: "21:00"
+attempt_limits:
+  max_attempts_per_week: 2
+  max_voicemails_per_week: 1
+payment_rules:
+  min_partial_pct: 0.40          # 40% minimum today
+  max_installments: 2
+  max_days_to_settle: 14
+  allow_zero_today_if_days_late_lt: 15
+tone_rules:
+  firm_after_days_late: 30
+  profanity_block: true
+escalation_triggers:
+  - dispute
+  - fraud_suspected
+  - out_of_policy_offer
+  - do_not_call
+prohibited_actions:
+  - collect_card_details
+  - threaten_legal_action
+```
+
+---
+
+## E. Minimal TypeScript types (so you can wire Convex now)
+
+```ts
+type InvoiceState = "Overdue" | "InProgress" | "PromiseToPay" | "PartialPaid" | "Paid" | "Dispute" | "Reassign" | "Callback" | "DNC";
+
+interface Policy {
+  id: string;
+  contactWindow: { startLocal: string; endLocal: string };
+  attemptLimits: { maxAttemptsPerWeek: number; maxVoicemailsPerWeek: number };
+  paymentRules: { minPartialPct: number; maxInstallments: number; maxDaysToSettle: number; allowZeroTodayIfDaysLateLt: number };
+  toneRules: { firmAfterDaysLate: number; profanityBlock: boolean };
+  escalationTriggers: string[];
+  prohibitedActions: string[];
+}
+
+interface NegotiationPlan {
+  askFull: boolean;
+  allowPartial: boolean;
+  minPartialPct: number;
+  maxDaysToSettle: number;
+  maxInstallments: number;
+}
+
+interface ToolCall<T=any> { tool: string; input: T; time: number; status: "ok" | "blocked" | "error"; policyMsg?: string; }
+
+interface RunTrace {
+  runId: string;
+  invoiceId: string;
+  events: ToolCall[];
+}
+```
+
+**Convex function example (policy‑enforced):**
+
+```ts
+export const createPaymentLink = mutation({
+  args: { invoiceId: v.string(), amount: v.number(), dueDate: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const inv = await ctx.db.get(invoiceId);
+    const policy = await ctx.db.get("policy", inv.policyId);
+    if (args.amount < inv.total * policy.paymentRules.minPartialPct) {
+      return { status: "blocked", reason: "Below min partial %" };
+    }
+    // ...call Autumn/Stripe test-mode...
+    // ...write Payment + RunTrace...
+    return { status: "ok", link: "<test-link>" };
+  }
+});
+```
+
+---
+
+## F. Vapi call design (voice agent)
+
+**System prompt (core):**
+
+> “You are **<YourCo AR>**, calling about overdue invoices. Always:
+>
+> 1. State identity and purpose clearly.
+> 2. Verify you’re speaking with the responsible party.
+> 3. First ask for full payment today via **secure link** (never collect card details).
+> 4. If full isn’t feasible, negotiate **within these bounds**:
+>    – Minimum partial today: **40%**
+>    – Max installments: **2**, settle within **14 days**
+>    – If days late < **15**, allow promise‑to‑pay with a specific date.
+> 5. If terms requested are out of bounds, offer the closest allowed option or **escalate to a human**.
+> 6. Confirm email, summarize the plan, and end courteously.
+>    Never threaten, never discuss legal action, and comply with do‑not‑call. If a dispute arises, stop and escalate.”
+
+**Slots (what the voice agent must extract):**
+
+* `can_pay_full_today: boolean`
+* `partial_amount_today: number`
+* `promise_date: ISODate`
+* `installments: 1|2`
+* `confirm_email: string`
+* `callback_time: string`
+* `notes: string` (freeform constraints)
+
+**Tool calls exposed to the voice agent (via MCP / webhook):**
+
+* `createPaymentLink({invoiceId, amount, dueDate?}) → {status, link}`
+* `sendEmail({to, subject, body, link}) → {status}`
+* `updateInvoiceStatus({invoiceId, state, meta}) → {status}`
+* `scheduleFollowUp({invoiceId, at, channel}) → {status}`
+
+*(Every call is policy‑checked server‑side. If blocked, return `{status:"blocked", reason}` and the voice agent apologizes and offers a compliant plan.)*
+
+**Example negotiation (partial today):**
+
+Agent: “Hi, this is **Sam with YourCo AR** calling about invoice **#1043** for **\$1,240**, due **July 31**. Can you take care of it today?”
+Customer: “Not the full amount.”
+Agent: “Understood. What’s feasible today?”
+Customer: “**\$600** today, rest Friday.”
+Agent: “That works. I’ll send a secure link for **\$600** now and a follow‑up link for **\$640** on **Friday Aug 29**. Should I email **[payables@acme.test](mailto:payables@acme.test)**?”
+Customer: “Yes.”
+Agent: “Great—sending now. You’ll receive a confirmation email. Thanks!”
+
+*(Behind the scenes: `createPaymentLink(600)` → ok → `sendEmail(...)` → ok → `updateInvoiceStatus(PartialPaid, {today:600, remaining:640, date:'2025‑08‑29'})`.)*
+
+**Out‑of‑policy example:**
+
+Customer: “I can do **\$200** today, rest in three payments.”
+Agent: “Our policy requires at least **40%** today and settling within **14 days**. I can accept **\$496 today** and **\$744 Friday**. Would that work? If not, I’ll loop in a teammate who can approve exceptions.”
+
+---
+
+## G. UI surfaces that make this obvious to judges
+
+* **Policy chip** on the right drawer: shows current bounds (min partial, max installments, contact window, attempts/week).
+* **Guardrail banner** during call: “No card collection • Attempts left this week: 1 • Local time: 10:42 AM (OK)”
+* **Trace tab**: each tool call shows `status: ok/blocked` and the reason if blocked.
+* **Edit Policy** button (read‑only in demo) to prove it’s configurable.
+
+---
+
+## H. Do you *have to* handle this now?
+
+* **Yes for the demo:** implement the **minimal guardrails above** and show them in UI. It’s low effort and high signal.
+* **No for full compliance tonight:** don’t promise regulatory completeness. Label the policy card “Demo policy (first‑party AR)” and include a one‑liner: “For production, add jurisdiction‑specific rules; we never take card details; disputes escalate.”
+
+**Minimum to ship tonight (checklist):**
+
+* [ ] Prompt includes rules + bounds
+* [ ] Only safe tools exposed
+* [ ] Server‑side `Policy.check` gates every tool call
+* [ ] Contact window + attempt counter enforced
+* [ ] Do‑not‑call flag respected
+* [ ] No card collection path exists anywhere
+* [ ] Trace & state transitions persisted
+
+---
+
+If you want, I can draft:
+
+* the exact **Vapi system prompt** and slot schema,
+* a **Convex mutation** for each tool with policy checks,
+* and a **1‑page policy editor** (read‑only) so judges see guardrails at a glance.
+
+But with the spec above, you can implement negotiation + guardrails in a few focused hours and look *production‑minded* on stage.
+

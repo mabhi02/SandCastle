@@ -1,0 +1,141 @@
+.modal {
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 99;
+
+  padding: 2rem 1.2rem;
+  background: var(--bg-opaque);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+
+  /* Using Flex here sticks the modalImage to the top.
+  Grid seems to fix this problem. */
+  display: grid;
+  place-items: center;
+
+  // Allow scrolling inside modal
+  overflow-y: scroll;
+}
+
+.modalCard {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  height: fit-content;
+  border-radius: 1.2rem;
+  background: var(--background-light);
+  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+  cursor: auto;
+}
+
+.modalImage {
+  border-radius: 1.2rem 1.2rem 0 0;
+  width: 100%;
+  height: auto;
+}
+
+.modalContent {
+  padding: 2.4rem;
+  h4 {
+    font-size: var(--text-lg);
+  }
+  // text-align: justify;
+}
+
+.modalTech {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+
+  font-size: var(--text-xs);
+  color: var(--brand);
+
+  margin: 0.2rem 0 2.4rem;
+}
+
+.suppliedContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  font-size: var(--text-xs);
+}
+
+.modalFooter {
+  margin-top: 2.4rem;
+}
+
+.linksText {
+  font-weight: bold;
+  font-size: var(--text-md);
+  margin-bottom: 0.8rem;
+
+  span {
+    color: var(--brand);
+  }
+}
+
+.spaceBetween {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+
+  a {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--text-xs);
+    font-weight: 400;
+    color: var(--brand);
+    opacity: 1;
+    transition: 0.2s;
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+
+.closeModalBtn {
+  z-index: 999;
+  position: absolute;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+
+  font-size: 2.5rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  
+  opacity: 0.7;
+  color: var(--text);
+  background-color: var(--background-light);
+
+  cursor: pointer;
+
+  svg {
+    opacity: 0.7;
+    transition: 0.2s;
+    @media (max-width: 768px) {
+      opacity: 1;
+    }
+  }
+  &:hover {
+    svg {
+      opacity: 1;
+      scale: 1.025;
+    }
+  }
+}

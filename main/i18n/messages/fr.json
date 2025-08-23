@@ -1,0 +1,156 @@
+{
+  "Sidebar": {
+    "about": "Qui nous sommes",
+    "projects": "Projets"
+  },
+  "Hero": {
+    "title": "Frank V",
+    "tagline": "Développeur Web",
+    "p1": "Full-Stack spécialisé en Next.js, React, et bien plus.",
+    "p2": "Manageur de ",
+    "p3": "— Youtube — 1M d'abonnés.",
+    "p4": "Vous cherchez un développeur pour créer votre site web ?"
+  },
+  "About": {
+    "section": "Qui nous sommes",
+    "p1": "Développeur web full-stack, spécialisé dans la création de sites responsives et modernes pour les particuliers et les petites entreprises. Mon objectif est d’offrir des expériences fluides, esthétiques et parfaitement adaptées à tous les appareils.",
+    "p2": "Je conçois des interfaces intuitives et optimise les performances pour une navigation rapide et accessible. Je propose également des services de SEO et de rédaction web pour améliorer la visibilité, renforcer le message et toucher efficacement votre audience.",
+    "p3": "Ma stack comprend React et Next.js pour le front-end, ainsi que Node.js, PostgreSQL et MongoDB pour le back-end. J’utilise aussi des outils d’IA comme ChatGPT, GitHub Copilot et Midjourney pour fluidifier mon processus et booster la créativité.",
+    "links": "Liens"
+  },
+  "Projects": {
+    "section": "Projets",
+    "gallery": "Visiter Galerie",
+
+    "desc1": "Un clone du site web de l'iPhone 15 Pro d'Apple utilisant React.js et TailwindCSS. Animations et éléments en 3D via l'utilisation de Three.js et GSAP.",
+    "modal1": "Il s'agit d'un clone du site web de l'iPhone 15 Pro d'Apple utilisant React.js et TailwindCSS. Il met en avant l'utilisation efficace de GSAP (Greensock Animations) et de Three.js pour afficher les modèles de l'iPhone 15 Pro dans différentes couleurs et formes.",
+
+    "desc2": "Plateforme de gestion d'événements construite avec Next.js. Cette application permet de publier des événements et inclue un paiement sécurisé.",
+    "modal2": "Evently est une plateforme de gestion d'événements construite sur Next.js. Elle sert de hub pour présenter des événements, propose des paiements sécurisés via Stripe, et permet d'acheter des billets ainsi que de gérer vos propres événements.",
+
+    "desc3": "Page d'accueil pour une agence de voyage avec une esthétique moderne et minimaliste, réalisée en HTML, CSS et JavaScript.",
+    "modal3": "Page d'accueil pour une agence de voyage avec une esthétique moderne et minimaliste, réalisée en HTML, CSS et JavaScript. Améliorée avec des animations fluides grâce à la bibliothèque ScrollReveal.js.",
+
+    "desc4": "Page d'accueil pour un restaurant de sushis avec une esthétique moderne et minimaliste, réalisée en HTML, CSS et JavaScript.",
+    "modal4": "Page d'accueil pour un restaurant de sushis avec une esthétique moderne et minimaliste, réalisée en HTML, CSS et JavaScript. Améliorée avec des animations fluides grâce à la bibliothèque ScrollReveal.js.",
+
+    "desc5": "Plateforme d'images AI avec traitement avancé : restauration, recoloration, suppression d'objets, remplissage génératif et suppression de fond.",
+    "modal5": "Une plateforme SaaS d'images AI avec traitement avancé des images, paiements sécurisés et recherche puissante. Fonctionnalités : restauration, recoloration, suppression d'objets, remplissage génératif et suppression de fond.",
+
+    "desc6": "CarHub présente divers types de voitures, offrant des informations complètes avec des options de filtrage avancées et une pagination.",
+    "modal6": "CarHub présente divers types de voitures, offrant des informations complètes avec des options de filtrage avancées et une pagination. Construite avec Next.js et exploitant ses capacités de rendu côté serveur.",
+
+    "desc7": "Site web 3D alimenté par Three.js avec des éléments interactifs. Naviguez à bord d'un petit avion et explorez une île flottante.",
+    "modal7": "Ce site web 3D, construit avec React et alimenté par Three.js, propose des éléments interactifs captivants. Naviguez à bord d'un petit avion pour explorer une île flottante et découvrir diverses informations. Sur la page de contact, un renard réagira dynamiquement pendant que vous remplissez les champs !",
+
+    "desc8": "Plateforme AI permettant aux utilisateurs de créer des podcasts via la de conversion texte-en-audio, ainsi que la génération de thumbnail.",
+    "modal8": "Une plateforme SaaS AI de pointe permettant aux utilisateurs de créer, découvrir et profiter de podcasts avec des fonctionnalités avancées telles que la conversion texte-en-audio utilisant l'IA multi-voix alimentée par l'API OpenAI, la génération d'images pour les miniatures de podcasts, et une lecture fluide. La plateforme inclut une authentification sécurisée via Clerk, garantissant une expérience utilisateur sûre et personnalisée."
+  },
+  "Experience": {
+    "section": "Partenaires",
+
+    "exp1": "Vapi Voice",
+    "role1": "Appels vocaux",
+    "date1": "",
+    "loca1": "Appels sortants",
+    "desc1": "Appels sortants en direct avec un script concis. Barge-in activé pour des interruptions naturelles. Connexion via PSTN ou WebRTC et émissions d'événements de l'appel dans la trace en direct. Nous affichons la connexion, l'acceptation et la fin d'appel dans la timeline. L'état d'appel alimente les badges UI et respecte les fenêtres de contact.",
+
+    "exp2": "AgentMail Inbox",
+    "role2": "Envoi d'emails",
+    "date2": "",
+    "loca2": "Email",
+    "desc2": "Boîte de réception détenue par l'agent pour l'email sortant et les réponses. Envoie le lien de paiement sécurisé avec les détails de facture. L'envoi et le statut apparaissent dans la trace UI. Les marqueurs de livraison, d'ouverture et de réponse mettent à jour l'état pour des relances ponctuelles. L'email est archivé pour l'audit avec adresses masquées.",
+
+    "exp3": "Autumn + Stripe",
+    "role3": "Liens de paiement",
+    "date3": "",
+    "loca3": "Paiements",
+    "desc3": "Crée un lien de paiement Stripe en mode test pour le montant convenu. Renvoie le lien pour l'email et publie un webhook en cas de succès. Un bouton de rapprochement est disponible si le webhook est lent. Le lien inclut le montant, un mémo et une expiration. Les retours de webhook sont validés avant tout changement d'état.",
+
+    "exp4": "Convex State",
+    "role4": "Moteur d'état",
+    "date4": "",
+    "loca4": "État réactif",
+    "desc4": "Source de vérité unique pour les factures et les runs. Les changements d'état se font via des mutations transactionnelles et mettent à jour l'UI en temps réel. Chaque transition est stockée pour l'audit. Chaque mutation enregistre qui, quoi et quand avec un identifiant de transaction. Compteurs, badges et réinitialisation restent cohérents après rechargement.",
+
+    "exp5": "Passerelle MCP",
+    "role5": "Orchestration d'outils",
+    "date5": "",
+    "loca5": "Orchestration",
+    "desc5": "Enregistre des outils sur liste blanche et applique des garde-fous à l'exécution. Produit des traces lisibles de chaque appel d'outil et résultat. Bloque les actions hors politique avant exécution. Chaque requête passe des contrôles de politique avec des raisons claires. Les entrées et sorties sont normalisées pour des traces lisibles et exportables."
+  },
+
+  
+  "Contact": {
+    "section": "Contact",
+    "p1": "Une idée à partager ? Envoyez-moi un e-mail pour en discuter ! Vous pouvez aussi me trouver sur ",
+    "p2": "selon votre préférence.",
+    "p3": "Rendez-vous"
+  },
+  "Footer": {
+    "copyright": "Tous droits réservés.",
+    "privacy": "Confidentialité",
+    "legalNotice": "Mentions Légales"
+  },
+  "Privacy": {
+    "header": "Vie Privée",
+    "date1": "Date d'entrée en vigueur :",
+    "date2": "1er décembre 2024",
+    "introTitle": "Introduction",
+    "introWelcome": "Bienvenue sur ",
+    "introBody": "Votre confidentialité est importante pour nous. Cette politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos informations lorsque vous visitez notre site web. Veuillez lire attentivement cette politique pour comprendre nos pratiques concernant vos données personnelles et comment nous les traitons.",
+    "infoTitle": "Informations que nous collectons",
+    "personalTitle": "Informations personnelles",
+    "personalBody": "Nous ne collectons pas d'informations personnelles à moins que vous ne choisissiez de nous contacter. Si vous nous envoyez un email, nous pouvons collecter les informations suivantes :",
+    "personalList1": "Votre adresse email",
+    "personalList2": "Tout autre détail que vous incluez dans votre email",
+    "nonPersonalTitle": "Informations non personnelles",
+    "nonPersonalBody": "Nous ne collectons pas automatiquement d'informations non personnelles telles que les adresses IP, les détails du navigateur ou les données d'utilisation.",
+    "usageTitle": "Comment nous utilisons vos informations",
+    "usageBody": "Si vous nous contactez par email, nous utilisons les informations que vous fournissez uniquement pour :",
+    "usageList1": "Répondre à vos demandes.",
+    "usageList2": "Fournir toute assistance ou information demandée.",
+    "usageNote": "Nous n'utilisons pas vos informations à des fins marketing et ne les partageons pas avec des tiers.",
+    "sharingTitle": "Partage de vos informations",
+    "sharingBody": "Nous ne vendons, louons ou partageons pas vos données personnelles avec des tiers. Vos informations sont utilisées exclusivement pour répondre à vos demandes.",
+    "cookiesTitle": "Cookies et technologies de suivi",
+    "cookiesBody": "Nous n'utilisons pas de cookies ou d'autres technologies de suivi sur notre site web.",
+    "retentionTitle": "Conservation des données",
+    "retentionBody": "Nous conservons les informations que vous fournissez dans vos emails uniquement aussi longtemps que nécessaire pour répondre à vos demandes. Une fois les informations inutiles, elles sont supprimées de manière sécurisée.",
+    "rightsTitle": "Vos droits",
+    "rightsBody": "Vous avez le droit de :",
+    "rightsList1": "Demander l'accès à toute information que vous nous avez fournie.",
+    "rightsList2": "Demander la suppression de vos informations de nos dossiers.",
+    "changesTitle": "Modifications de cette politique de confidentialité",
+    "changesBody": "Nous pouvons mettre à jour cette politique de confidentialité de temps à autre. Toute modification sera reflétée sur cette page avec une date de révision mise à jour.",
+    "contactTitle": "Nous contacter",
+    "contactBody": "Si vous avez des questions ou des préoccupations concernant cette politique de confidentialité ou nos pratiques, veuillez nous contacter à :",
+    "contactEmail": "SandCastleYC@gmail.com"
+  },
+  "LegalNotice": {
+    "header": "Mentions Légales",
+    "responsibleTitle": "Responsable du Site",
+    "companyName": "Raison sociale :",
+    "legalForm1": "Forme juridique :",
+    "legalForm2": "Entreprise individuelle (EI)",
+    "headquarters": "Siège social :",
+    "registrationNumber": "Numéro d’immatriculation :",
+    "capital": "Capital social :",
+    "email": "Email :",
+    "phone": "Téléphone :",
+    "hostingTitle": "Hébergement",
+    "hostingProvider": "Hébergeur :",
+    "hostingAddress": "Adresse :",
+    "hostingPhone": "Téléphone :",
+    "hostingEmail": "Email :",
+    "intellectualTitle": "Propriété Intellectuelle",
+    "intellectualBody": "Tous les contenus présents sur ce site (textes, images, logos, etc.) sont la propriété exclusive de M. Franck Vukelic, sauf mention contraire. Toute reproduction, distribution ou utilisation sans autorisation écrite est interdite et peut entraîner des poursuites.",
+    "responsibilityTitle": "Responsabilités",
+    "responsibilityBody1": "Le responsable du site ne peut être tenu responsable des dommages résultant de l’utilisation de ce site, y compris les interruptions ou bugs.",
+    "responsibilityBody2": "Les liens externes proposés sur ce site n’engagent pas la responsabilité du responsable quant à leur contenu.",
+    "contactTitle": "Contact",
+    "contactBody": "Pour toute question ou demande, contactez-nous à :",
+    "internationalTitle": "International",
+    "internationalBody": "Ce site web est géré par M. Franck Vukelic, basé en France. En utilisant ce site, vous acceptez de respecter les lois applicables en France."
+  }
+}

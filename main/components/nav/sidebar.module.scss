@@ -1,0 +1,100 @@
+.sideBar {
+  background: var(--background-dark);
+
+  height: 100vh;
+
+  position: sticky;
+  top: 0px;
+  left: 0px;
+  z-index: 20;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  justify-content: flex-start;
+
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+
+  .selected {
+    background: var(--background);
+    border-right: 1px solid var(--brand);
+    opacity: 1;
+    color: var(--brand);
+    text-shadow: 0 0 6px rgba(88, 104, 242, 0.7);
+  }
+}
+
+.sideBar > div {
+  display: flex;
+  flex: 1;
+}
+
+.navLinks {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.navItem {
+  display: flex;
+  flex: 1;
+}
+
+.sideBarLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  height: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 1rem;
+  // flex-shrink: 0;
+
+  writing-mode: vertical-lr;
+  font-size: var(--text-sm);
+  font-weight: 200;
+  opacity: 0.5;
+  white-space: nowrap;
+  word-break: keep-all;
+
+  border-right: 1px solid transparent;
+
+  transition: 0.1s all;
+}
+
+.sideBarLink:hover {
+  background: var(--background);
+  border-right: 1px solid var(--brand);
+  opacity: 1;
+}
+
+.logo {
+  cursor: pointer;
+  flex-shrink: 0;
+
+  width: 60px;
+  height: 60px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: black;
+  border-radius: 4px;
+
+  margin: 0.8rem 0;
+
+  .logoImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.sideBar::-webkit-scrollbar {
+  display: none;
+}

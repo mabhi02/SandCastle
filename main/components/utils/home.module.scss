@@ -1,0 +1,41 @@
+.home {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+}
+
+// Privacy + Legal Notice pages
+.legal {
+  max-width: 1150px;
+  margin: auto;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  padding: 9.6rem;
+  gap: 2rem;
+
+  h2 {
+    margin-top: 4rem;
+    font-size: var(--text-lg);
+
+    @media (max-width: 768px) {
+      font-size: var(--text-md);
+    }
+  }
+
+  a {
+    transition: 0.2s;
+    &:hover {
+      color: var(--brand);
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 7rem 3rem;
+  }
+  @media (max-width: 480px) {
+    max-width: 360px;
+    padding: 3rem 1.5rem;
+    font-size: var(--text-xs);
+  }
+}
