@@ -10,7 +10,7 @@ export const updateVendorPhones = mutation({
     
     for (const vendor of vendors) {
       await ctx.db.patch(vendor._id, {
-        contactPhone: "+15625212896", // Valid test phone number
+        contactPhone: "+17657469771", // Valid test phone number
         updatedAt: Date.now(),
       });
     }

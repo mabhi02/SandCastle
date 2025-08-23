@@ -195,7 +195,7 @@ export const startCall = mutation({
     }
     
     // Use direct VAPI integration - no Flask needed!
-    const phoneNumber = vendor.contactPhone || "+15625212896"; // Default demo number
+    const phoneNumber = vendor.contactPhone || "+17657469771"; // Default demo number
     
     // Generate a temporary call ID that we can track
     const tempCallId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

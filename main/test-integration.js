@@ -7,7 +7,7 @@
 console.log('🚀 Testing Sandcastle VAPI Integration\n');
 
 const CONVEX_URL = 'https://scintillating-sturgeon-599.convex.cloud';
-const TEST_PHONE = '+15625212896';  // Default test number
+const TEST_PHONE = '+17657469771';  // Default test number
 
 async function testIntegration() {
   console.log('📞 Integration Test Summary:');

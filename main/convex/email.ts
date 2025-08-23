@@ -188,7 +188,17 @@ export const sendPostCallEmail = action({
     success: boolean;
     message: string;
     extractedAmount?: number;
+    extractedCompanyName?: string;
+    extractedEmail?: string;
     paymentLink?: string;
+    callAssessment?: {
+      callStatus?: string;
+      paymentStatus?: string;
+      promisedAmount?: number;
+      remainingDebt?: number;
+      nextFollowUpDate?: string;
+      summary?: string;
+    };
     emailSent?: {
       to: string;
       from: string;
@@ -231,25 +241,108 @@ export const sendPostCallEmail = action({
 
       console.log(`📝 Full transcript for call ${args.callId}:`, fullTranscript.slice(0, 500) + '...');
 
-      // Extract payment amount using OpenAI
+      // Extract all information using OpenAI (3 separate calls as requested)
       let extractedAmount: number | undefined;
       let paymentAmountText = '';
+      let extractedCompanyName: string | undefined;
+      let extractedEmail: string | undefined;
       
       if (fullTranscript.length > 10) {
-        const extractionResult = await ctx.runAction(api.openai.extractPaymentAmount, {
+        // 1. Extract payment amount
+        const amountResult = await ctx.runAction(api.openai.extractPaymentAmount, {
           transcript: fullTranscript,
           callId: args.callId,
         });
 
-        if (extractionResult.success && extractionResult.amount) {
-          extractedAmount = extractionResult.amount;
-          paymentAmountText = `$${(extractionResult.amount / 100).toFixed(2)}`;
+        if (amountResult.success && amountResult.amount) {
+          extractedAmount = amountResult.amount;
+          paymentAmountText = `$${(amountResult.amount / 100).toFixed(2)}`;
           console.log(`💰 Extracted payment amount: ${paymentAmountText}`);
+        }
+
+        // 2. Extract company name
+        const companyResult = await ctx.runAction(api.openai.extractCompanyName, {
+          transcript: fullTranscript,
+          callId: args.callId,
+        });
+
+        if (companyResult.success && companyResult.companyName) {
+          extractedCompanyName = companyResult.companyName;
+          console.log(`🏢 Extracted company name: ${extractedCompanyName}`);
+        }
+
+        // 3. Extract email address
+        const emailResult = await ctx.runAction(api.openai.extractEmail, {
+          transcript: fullTranscript,
+          callId: args.callId,
+        });
+
+        if (emailResult.success && emailResult.email) {
+          extractedEmail = emailResult.email;
+          console.log(`📧 Extracted email: ${extractedEmail}`);
         }
       }
 
-      // Hardcoded Stripe payment link from agentmail/src
-      const stripePaymentLink = 'https://buy.stripe.com/test_3cI14peBf5NqePJ6ss6EU02';
+      // 4. Assess call success and update database
+      let callAssessment: any = null;
+      if (fullTranscript.length > 10) {
+        // Get the first invoice for this vendor to know the original debt
+        const invoices = await ctx.runQuery(api.invoices.getByVendor, {
+          vendorId: args.vendorId,
+        });
+        const primaryInvoice = invoices[0]; // Assuming first invoice is the main one
+        
+        const assessmentResult = await ctx.runAction(api.openai.assessCallSuccess, {
+          transcript: fullTranscript,
+          callId: args.callId,
+          originalDebt: primaryInvoice?.amountCents,
+        });
+
+        if (assessmentResult.success) {
+          callAssessment = assessmentResult;
+          console.log(`📊 Call assessment:`, assessmentResult);
+
+          // Update database with assessment results
+          // Omit nextFollowUpDate when it is null to satisfy v.optional(v.string())
+          await ctx.runMutation(api.callAssessment.updateAfterCall, {
+            vendorId: args.vendorId,
+            invoiceId: primaryInvoice?._id,
+            callStatus: assessmentResult.callStatus || "unsuccessful",
+            paymentStatus: assessmentResult.paymentStatus || "no_payment",
+            promisedAmount: assessmentResult.promisedAmount || extractedAmount,
+            remainingDebt: assessmentResult.remainingDebt,
+            ...(assessmentResult.nextFollowUpDate != null
+              ? { nextFollowUpDate: assessmentResult.nextFollowUpDate }
+              : {}),
+            summary: assessmentResult.summary,
+          });
+        }
+      }
+
+      // Use extracted email or fallback to hardcoded/vendor email
+      const targetEmail = extractedEmail || hardcodedEmail;
+      const companyName = extractedCompanyName || vendor.name;
+
+      // Generate dynamic Stripe payment link using Autumn if amount is extracted
+      let stripePaymentLink = 'https://buy.stripe.com/test_3cI14peBf5NqePJ6ss6EU02'; // Default fallback
+      
+      if (extractedAmount && extractedAmount > 0) {
+        try {
+          const checkoutResult = await ctx.runAction(api.autumn.createCheckoutLink, {
+            customerId: `vendor_${args.vendorId}`,
+            email: targetEmail,
+            name: companyName,
+            amountCents: extractedAmount
+          });
+
+          if (checkoutResult.success && checkoutResult.checkoutUrl) {
+            stripePaymentLink = checkoutResult.checkoutUrl;
+            console.log(`🔗 Generated dynamic payment link via Autumn: ${stripePaymentLink}`);
+          }
+        } catch (autumnError) {
+          console.error('Failed to generate Autumn checkout link, using default:', autumnError);
+        }
+      }
 
       // Get recent invoices for this vendor
       const invoices = await ctx.runQuery(api.invoices.getByVendor, { 
@@ -279,7 +372,7 @@ export const sendPostCallEmail = action({
         // Successful call completion
         subject = `Payment Link - Thank You for Speaking With Us`;
         emailContent = `
-Dear ${vendor.name},
+Dear ${companyName},
 
 Thank you for taking the time to speak with us today regarding your outstanding invoices.
 
@@ -301,7 +394,7 @@ ${appUser.companyName || 'Collections Team'}
         // Customer hung up
         subject = `Payment Link - Important Follow-up`;
         emailContent = `
-Dear ${vendor.name},
+Dear ${companyName},
 
 We attempted to reach you today regarding your outstanding invoices, but the call was disconnected.
 
@@ -323,7 +416,7 @@ ${appUser.companyName || 'Collections Team'}
         // General follow-up for other outcomes
         subject = `Payment Link - Account Follow-up`;
         emailContent = `
-Dear ${vendor.name},
+Dear ${companyName},
 
 Following our recent contact attempt regarding your account, we're providing you with a convenient payment option:
 
@@ -341,10 +434,11 @@ ${appUser.companyName || 'Collections Team'}
 `;
       }
 
-      // Send email via AgentMail to hardcoded address
+      // Send email via AgentMail to extracted or fallback address
+      // Use the demo inbox we created instead of appUser.agentMailFrom for now
       const emailResult = await ctx.runAction(api.agentmail.sendEmail, {
-        toEmail: hardcodedEmail,
-        fromInbox: appUser.agentMailFrom,
+        toEmail: targetEmail, // Using extracted email or fallback
+        fromInbox: "sandcastleyc-5c8e21@agentmail.to", // Using the actual created inbox
         subject: subject,
         content: emailContent
       });
@@ -353,18 +447,44 @@ ${appUser.companyName || 'Collections Team'}
         throw new Error(emailResult.error || "Failed to send email");
       }
 
-      console.log(`✅ Post-call email sent to ${hardcodedEmail} via AgentMail`);
+      console.log(`✅ Post-call email sent to ${targetEmail} via AgentMail`);
       console.log(`💰 Extracted payment amount: ${paymentAmountText || 'None found'}`);
+      console.log(`🏢 Extracted company: ${extractedCompanyName || 'Using vendor name'}`);
+      console.log(`📧 Extracted email: ${extractedEmail || 'Using fallback'}`);
       console.log(`🔗 Payment link included: ${stripePaymentLink}`);
+
+      // Log email sent activity
+      await ctx.runMutation(api.activity.create, {
+        userId: vendor.userId,
+        type: "email_sent",
+        description: `Payment email sent to ${companyName} (${targetEmail}) with ${paymentAmountText || 'payment'} link`,
+        metadata: {
+          vendorId: args.vendorId,
+          callId: args.callId,
+          email: targetEmail,
+          amount: extractedAmount,
+          paymentLink: stripePaymentLink,
+        },
+      });
       
       return {
         success: true,
         message: "Post-call email sent successfully with payment link",
         extractedAmount: extractedAmount,
+        extractedCompanyName: extractedCompanyName,
+        extractedEmail: extractedEmail,
         paymentLink: stripePaymentLink,
+        callAssessment: callAssessment ? {
+          callStatus: callAssessment.callStatus,
+          paymentStatus: callAssessment.paymentStatus,
+          promisedAmount: callAssessment.promisedAmount,
+          remainingDebt: callAssessment.remainingDebt,
+          nextFollowUpDate: callAssessment.nextFollowUpDate,
+          summary: callAssessment.summary,
+        } : undefined,
         emailSent: {
-          to: hardcodedEmail,
-          from: appUser.agentMailFrom,
+          to: targetEmail,
+          from: "sandcastleyc-5c8e21@agentmail.to",
           subject: subject,
           messageId: emailResult.messageId || "unknown"
         }
