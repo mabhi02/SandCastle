@@ -33,6 +33,21 @@ export const initiateCall = action({
     console.log(`Initiating VAPI call to ${phoneNumber} for invoice ${args.invoiceNo}`);
     
     // Build the VAPI call request
+    // Compute current datetime values for the assistant
+    const timeZone = "America/New_York";
+    const now = new Date();
+    const datetimeISO = now.toISOString();
+    const datetimeHuman = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      weekday: "short",
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).format(now);
+
     const vapiRequest = {
       assistantId: VAPI_ASSISTANT_ID,
       phoneNumberId: VAPI_PHONE_NUMBER_ID,
@@ -72,7 +87,11 @@ export const initiateCall = action({
           neverCollectCardOnCall: true,
           contactWindowStart: "09:00",
           contactWindowEnd: "17:00",
-          timezone: "America/New_York",
+          timezone: timeZone,
+          // Datetime values expected by the assistant prompt
+          // `datetime` is a human-readable local time string; `datetimeISO` is UTC ISO-8601.
+          datetime: datetimeHuman,
+          datetimeISO,
           
           // Additional context
           email: args.vendorEmail,
