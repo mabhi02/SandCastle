@@ -14,33 +14,221 @@ const invoiceState = v.union(
   v.literal("DNC")
 );
 
-export const getInvoiceMetrics = query({
-  args: { userId: v.id("app_users") },
-  returns: v.object({
-    overdue: v.number(),
-    inProgress: v.number(),
-    paid: v.number(),
-    totalOutstandingCents: v.number(),
-  }),
-  handler: async (ctx, args) => {
+export const getInvoices = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("invoices"),
+      _creationTime: v.number(),
+      userId: v.id("app_users"),
+      vendorId: v.id("vendors"),
+      invoiceNo: v.string(),
+      amountCents: v.number(),
+      dueDateISO: v.string(),
+      state: invoiceState,
+      paidCents: v.number(),
+      lastStateChangeAt: v.number(),
+      promiseDateISO: v.optional(v.string()),
+      memo: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    // For demo: just get ALL invoices regardless of user
     const invoices = await ctx.db
       .query("invoices")
-      .withIndex("by_user_state", (q) => q.eq("userId", args.userId))
       .collect();
+    
+    return invoices;
+  },
+});
 
-    const overdue = invoices.filter((i) => i.state === "Overdue").length;
-    const inProgress = invoices.filter((i) => i.state === "InProgress").length;
-    const paid = invoices.filter((i) => i.state === "Paid" || i.state === "PartialPaid").length;
-    const totalOutstandingCents = invoices
-      .filter((i) => i.state === "Overdue")
-      .reduce((sum, i) => sum + (i.amountCents - i.paidCents), 0);
+export const getVendors = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("vendors"),
+      _creationTime: v.number(),
+      userId: v.id("app_users"),
+      name: v.string(),
+      contactEmail: v.optional(v.string()),
+      contactPhone: v.optional(v.string()),
+      doNotCall: v.boolean(),
+      preferredChannel: v.union(v.literal("voice"), v.literal("email")),
+      vendorMinPctBps: v.optional(v.number()),
+      contactWindowStartLocal: v.optional(v.string()),
+      contactWindowEndLocal: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    // For demo: just get ALL vendors regardless of user
+    const vendors = await ctx.db
+      .query("vendors")
+      .collect();
+    
+    return vendors;
+  },
+});
 
+export const getVendorStates = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("vendor_state"),
+      _creationTime: v.number(),
+      userId: v.id("app_users"),
+      vendorId: v.id("vendors"),
+      historicalMode: v.union(
+        v.literal("full_today"),
+        v.literal("partial_today"),
+        v.literal("promise"),
+        v.null()
+      ),
+      attemptsThisWeek: v.number(),
+      lastAttemptAt: v.optional(v.number()),
+      nextFollowUpAt: v.optional(v.number()),
+      scheduledBy: v.optional(v.string()),
+      lastOutcome: v.optional(v.string()),
+      lastPaidAmountCents: v.optional(v.number()),
+      lastPromiseDate: v.optional(v.string()),
+      totalRecoveredCents: v.number(),
+      totalOutstandingCents: v.number(),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    // For demo: just get ALL vendor states regardless of user
+    const vendorStates = await ctx.db
+      .query("vendor_state")
+      .collect();
+    
+    return vendorStates;
+  },
+});
+
+export const getStats = query({
+  args: {},
+  returns: v.object({
+    totalOutstanding: v.number(),
+    overdueCount: v.number(),
+    promiseAmount: v.number(),
+    recoveredToday: v.number(),
+    activeCalls: v.number(),
+    successRate: v.number(),
+  }),
+  handler: async (ctx) => {
+    // For demo: just get ALL data regardless of user
+    const invoices = await ctx.db
+      .query("invoices")
+      .collect();
+    
+    const vendorStates = await ctx.db
+      .query("vendor_state")
+      .collect();
+    
+    const totalOutstanding = invoices.reduce((sum, inv) => 
+      sum + (inv.amountCents - inv.paidCents), 0
+    );
+    
+    const overdueCount = invoices.filter(inv => inv.state === "Overdue").length;
+    
+    const promiseAmount = invoices
+      .filter(inv => inv.state === "PromiseToPay")
+      .reduce((sum, inv) => sum + (inv.amountCents - inv.paidCents), 0);
+    
+    // Calculate today's recovered amount (simplified - in production would track by date)
+    const recoveredToday = vendorStates.reduce((sum, vs) => 
+      sum + (vs.lastPaidAmountCents || 0), 0
+    );
+    
+    // Count active calls (simplified - in production would track actual call status)
+    const activeCalls = 0;
+    
+    // Calculate success rate
+    const totalAttempts = vendorStates.reduce((sum, vs) => 
+      sum + vs.attemptsThisWeek, 0
+    );
+    const successfulAttempts = vendorStates.filter(vs => 
+      vs.lastOutcome === "promise" || vs.lastOutcome === "paid"
+    ).length;
+    const successRate = totalAttempts > 0 
+      ? Math.round((successfulAttempts / totalAttempts) * 100) 
+      : 0;
+    
     return {
-      overdue,
-      inProgress,
-      paid,
-      totalOutstandingCents,
+      totalOutstanding,
+      overdueCount,
+      promiseAmount,
+      recoveredToday,
+      activeCalls,
+      successRate,
     };
+  },
+});
+
+export const startCall = mutation({
+  args: { vendorId: v.id("vendors") },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    const appUser = await getOrCreateAppUser(ctx);
+    if (!appUser) throw new Error("User not found");
+    
+    // Update vendor state to track the call attempt
+    const vendorState = await ctx.db
+      .query("vendor_state")
+      .withIndex("by_vendor", (q) => q.eq("vendorId", args.vendorId))
+      .unique();
+    
+    if (vendorState) {
+      await ctx.db.patch(vendorState._id, {
+        lastAttemptAt: Date.now(),
+        attemptsThisWeek: vendorState.attemptsThisWeek + 1,
+        updatedAt: Date.now(),
+      });
+    } else {
+      await ctx.db.insert("vendor_state", {
+        userId: appUser._id,
+        vendorId: args.vendorId,
+        historicalMode: null,
+        attemptsThisWeek: 1,
+        lastAttemptAt: Date.now(),
+        totalRecoveredCents: 0,
+        totalOutstandingCents: 0,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+    
+    return { success: true };
+  },
+});
+
+export const sendEmail = mutation({
+  args: { vendorId: v.id("vendors") },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    const appUser = await getOrCreateAppUser(ctx);
+    if (!appUser) throw new Error("User not found");
+    
+    // Track email attempt (simplified)
+    const vendorState = await ctx.db
+      .query("vendor_state")
+      .withIndex("by_vendor", (q) => q.eq("vendorId", args.vendorId))
+      .unique();
+    
+    if (vendorState) {
+      await ctx.db.patch(vendorState._id, {
+        lastAttemptAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+    
+    return { success: true };
   },
 });
 
@@ -121,33 +309,33 @@ export const addVendors = mutation({
   },
 });
 
-export const getVendors = query({
-  args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("vendors"),
-      customer: v.string(),
-      contact_email: v.optional(v.string()),
-      contact_phone: v.optional(v.string()),
-      notes: v.optional(v.string()),
-      _creationTime: v.number(),
-    })
-  ),
-  handler: async (ctx) => {
-    // For development, just get all vendors regardless of user
-    // In production, you'd filter by authenticated user
-    const vendors = await ctx.db
-      .query("vendors")
+export const getInvoiceMetrics = query({
+  args: { userId: v.id("app_users") },
+  returns: v.object({
+    overdue: v.number(),
+    inProgress: v.number(),
+    paid: v.number(),
+    totalOutstandingCents: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const invoices = await ctx.db
+      .query("invoices")
+      .withIndex("by_user_state", (q) => q.eq("userId", args.userId))
       .collect();
-    
-    return vendors.map(v => ({
-      _id: v._id,
-      customer: v.name,
-      contact_email: v.contactEmail,
-      contact_phone: v.contactPhone,
-      notes: v.notes,
-      _creationTime: v.createdAt,
-    }));
+
+    const overdue = invoices.filter((i) => i.state === "Overdue").length;
+    const inProgress = invoices.filter((i) => i.state === "InProgress").length;
+    const paid = invoices.filter((i) => i.state === "Paid" || i.state === "PartialPaid").length;
+    const totalOutstandingCents = invoices
+      .filter((i) => i.state === "Overdue")
+      .reduce((sum, i) => sum + (i.amountCents - i.paidCents), 0);
+
+    return {
+      overdue,
+      inProgress,
+      paid,
+      totalOutstandingCents,
+    };
   },
 });
 

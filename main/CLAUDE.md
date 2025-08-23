@@ -1,6 +1,6 @@
 # collection agent
 
-This is an AR collection agent app that basically has a table of like customers and their invoice statuses, and then lets you spawn or lets you do a call to the customers and then it has the transcript of that shit live. It's like Convex. It uses Convex as the backend. It's for a YC AI agents hackathon, and it's important that it really showcases the Convex reactive functionality. Yeah, we kind of just want it to be really visible and shit. God bless you Claude.
+We're building an AI agent that automatically collects overdue invoices for businesses - it calls customers, negotiates payment terms, sends payment links, and processes the money, turning "overdue" into "paid" without human intervention. Every Friday, instead of founders and finance teams spending hours chasing payments, our agent handles the entire collection process while they focus on growing their business. This isn't a tool to help AR clerks work faster - it completely replaces the AR clerk, handling everything from the first call to the final payment. The vision is that no business should ever have to manually chase an invoice again.RetryClaude can make mistakes. Please double-check responses.
 
 Please read @.cursor/convex_rules.mdc .
 
