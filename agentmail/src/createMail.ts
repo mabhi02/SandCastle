@@ -22,8 +22,8 @@ export async function createMail(userEmail: string): Promise<CreatedInbox> {
   const client = new AgentMailClient({ apiKey });
 
   // Deterministic client_id lets us retry safely & prevents duplicate inboxes per user.
-  // e.g., "inbox-for-user:user@example.com"
-  const clientId = `inbox-for-user:${userEmail.toLowerCase()}`;
+  // e.g., "inbox-for-user-user@example.com"
+  const clientId = `inbox-for-user-${userEmail.toLowerCase().replace(/[^a-z0-9._~-]/g, '-')}`;
 
   // Optional: stable, human-readable username derived from the user’s email + short hash.
   // If you omit `username`, AgentMail will generate one and default to @agentmail.to. :contentReference[oaicite:1]{index=1}

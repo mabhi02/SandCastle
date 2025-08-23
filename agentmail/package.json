@@ -10,7 +10,8 @@
     },
     "dependencies": {
         "agentmail": "^0.0.54",
-        "dotenv": "^16.6.1"
+        "dotenv": "^16.6.1",
+        "stripe": "^14.0.0"
     },
     "devDependencies": {
         "@types/node": "^22.5.4",
