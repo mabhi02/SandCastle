@@ -492,28 +492,76 @@
   border-radius: 4px;
   padding: 16px;
   overflow-y: auto;
-  font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.5;
+}
+
+// Chat message styles
+.messageRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.messageRow.agent {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--background);
+  border: 1px solid var(--background-light);
+  color: var(--text);
   opacity: 0.8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
-.transcriptLine {
-  margin-bottom: 8px;
-  padding: 6px;
-  background: rgba(255, 255, 255, 0.01);
-  border-radius: 2px;
+.message {
+  max-width: 75%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--background-light);
+  border-radius: 12px;
+  padding: 8px 10px;
 }
 
-.agentLine {
-  border-left: 2px solid #10b981;
-  padding-left: 10px;
+.agent .message {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
-.vendorLine {
-  border-left: 2px solid #3b82f6;
-  padding-left: 10px;
+.vendor .message {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.messageMeta {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.name {
+  font-weight: 600;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.time {
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+
+.messageText {
+  white-space: pre-wrap;
 }
 
 .activityFeed {
