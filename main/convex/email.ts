@@ -199,7 +199,7 @@ export const sendPostCallEmail = action({
   }> => {
     try {
       // Hardcoded email address as requested
-      const hardcodedEmail = 'atharvajpatel@gmail.com';
+      const hardcodedEmail = 'sandcastleyc@gmail.com';
       
       // Get vendor information from Convex schema
       const vendor = await ctx.runQuery(api.vendors.get, { 

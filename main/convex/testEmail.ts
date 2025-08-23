@@ -41,7 +41,7 @@ export const testPostCallEmail = action({
       console.log("✅ Test email result:", result);
       console.log(`💰 Extracted amount: ${result.extractedAmount ? '$' + (result.extractedAmount / 100).toFixed(2) : 'None'}`);
       console.log(`🔗 Payment link: ${result.paymentLink}`);
-      console.log(`📧 Email sent to: atharvajpatel@gmail.com`);
+      console.log(`📧 Email sent to: sandcastleyc@gmail.com`);
       
       return result;
 

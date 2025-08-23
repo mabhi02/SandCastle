@@ -15,7 +15,7 @@ async function sendFinalInvoiceEmail() {
          // Send email with the working payment link
      console.log('📧 Sending email with working Stripe link...');
      await sendAgentmailEmail(
-       'atharvajpatel@gmail.com',
+       'sandcastleyc@gmail.com',
        senderInbox,
        `🔗 **Payment Link**: ${workingStripeLink}
 
@@ -30,11 +30,11 @@ async function sendFinalInvoiceEmail() {
 
     console.log(`✅ Email sent successfully!`);
     console.log(`📧 From: ${senderInbox}`);
-    console.log(`📧 To: atharvajpatel@gmail.com`);
+    console.log(`📧 To: sandcastleyc@gmail.com`);
     console.log(`🔗 Working Stripe Link: ${workingStripeLink}`);
 
     console.log('\n🎯 Demo Instructions:');
-    console.log('1. Check your email at atharvajpatel@gmail.com');
+    console.log('1. Check your email at sandcastleyc@gmail.com');
     console.log('2. Click the Stripe payment link in the email');
     console.log('3. Use the test card: 4242 4242 4242 4242');
     console.log('4. Complete the payment flow - it will work!');

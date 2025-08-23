@@ -67,7 +67,7 @@ export const runFullEmailTest = action({
       }
 
       console.log("\n🎯 Test Summary:");
-      console.log("- All emails sent to: atharvajpatel@gmail.com");
+      console.log("- All emails sent to: sandcastleyc@gmail.com");
       console.log("- Payment link: https://buy.stripe.com/test_3cI14peBf5NqePJ6ss6EU02");
       console.log("- OpenAI extracted payment amounts from transcripts");
       console.log("- Test card: 4242 4242 4242 4242");
