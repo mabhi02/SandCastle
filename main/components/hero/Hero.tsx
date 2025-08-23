@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Reveal } from "@/components/utils/Reveal";
 import { DotGrid } from "./DotGrid";
 import styles from "./hero.module.scss";
@@ -28,7 +28,7 @@ export const Hero = () => {
             </p>
           </Reveal>
           <Reveal>
-            <Link href="#contact" aria-label="Go to Contact">
+            <Link href="/app" aria-label="Try it out">
               <button className={styles.contactButton}>Try it out</button>
             </Link>
           </Reveal>

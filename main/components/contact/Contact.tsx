@@ -3,6 +3,7 @@ import { Reveal } from "@/components/utils/Reveal";
 import styles from "./contact.module.scss";
 import { AiFillMail } from "react-icons/ai";
 import { Socials } from "../nav/Socials";
+import { Link } from "@/i18n/navigation";
 import heroStyles from "@/components/hero/hero.module.scss";
 
 export const Contact = () => {
@@ -31,11 +32,9 @@ export const Contact = () => {
               <AiFillMail size="2.4rem" />
               <span>SandCastleYC@gmail.com</span>
             </a>
-            <a
-              href="mailto:SandCastleYC@gmail.com?subject=Try%20it%20out"
-              aria-label="Try it out">
+            <Link href="/app" aria-label="Try it out">
               <button className={`${heroStyles.contactButton} ${styles.ctaButton}`}>Try it out</button>
-            </a>
+            </Link>
           </div>
         </Reveal>
         <Reveal width="100%">

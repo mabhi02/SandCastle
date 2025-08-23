@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { AiOutlinePlayCircle } from "react-icons/ai";
@@ -26,16 +26,12 @@ const newPath = currentPath.includes("/fr")
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.6 }}>
-          <a
-            href={currentPath.includes("/fr") ? "https://cvdesignr.com/p/6736b957f2035" : "https://cvdesignr.com/p/6736d2bee1dfa"}
-            target="_blank"
-            rel="nofollow"
-            title="Resume">
+          <Link href="/app" aria-label="Try it out">
             <button className={styles.outlineButton} aria-label="Try it out">
               Try it out
               <AiOutlinePlayCircle size="2.4rem" />
             </button>
-          </a>
+          </Link>
         </motion.span>
       </div>
     </header>

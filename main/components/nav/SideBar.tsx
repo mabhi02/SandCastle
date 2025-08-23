@@ -40,14 +40,12 @@ export const SideBar = () => {
           initial={{ x: -70 }}
           animate={{ x: 0 }}
           transition={{ duration: 0.5, delay: 0.05 }}>
-          <a
+          <Link
             className={styles.sideBarLink}
-            href="https://github.com/mabhi02/Sandcastle"
-            target="_blank"
-            rel="nofollow"
+            href="/app"
             aria-label="App">
             App
-          </a>
+          </Link>
         </motion.div>
 
         <motion.div
