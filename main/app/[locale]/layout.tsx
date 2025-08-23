@@ -3,6 +3,8 @@ import { Poppins } from "next/font/google";
 // NextIntl
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
+// Convex
+import ConvexClientProvider from "@/components/ConvexClientProvider";
 //
 import "./globals.css";
 
@@ -71,8 +73,13 @@ export default async function RootLayout({
 
   return (
     <NextIntlClientProvider messages={messages}>
-    <html lang="en" suppressHydrationWarning={true}>
-      <body className={poppins.className} id="root">{children}</body>
-    </html></NextIntlClientProvider>
+      <html lang="en" suppressHydrationWarning={true}>
+        <body className={poppins.className} id="root">
+          <ConvexClientProvider>
+            {children}
+          </ConvexClientProvider>
+        </body>
+      </html>
+    </NextIntlClientProvider>
   );
 }

@@ -11,6 +11,8 @@ import styles from '@/components/utils/home.module.scss'
 import dashStyles from '@/components/utils/dashboard.module.scss'
 import { getSession, clearSession, getOrCreateApiKey, setApiKey, revokeApiKey } from '@/components/utils/auth'
 import { Socials } from '@/components/nav/Socials'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 
 type TabKey = 'tab1' | 'tab2' | 'tab3'
 type CellStyle = { color?: string; background?: string; bold?: boolean; italic?: boolean; underline?: boolean; align?: 'left' | 'center' | 'right'; wrap?: boolean }
@@ -41,6 +43,25 @@ const DashboardPage = () => {
     return rows.filter((r) => Object.values(r).some((v) => (v ?? '').toLowerCase().includes(term)))
   }, [rows, filter])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Convex integration
+  const vendors = useQuery(api.dashboard.getVendors) || []
+  const addVendors = useMutation(api.dashboard.addVendors)
+  
+  console.log('Current vendors:', vendors)
+  console.log('addVendors mutation:', addVendors)
+
+  // Sync Convex vendors into local rows for the latest UI
+  useEffect(() => {
+    if (vendors && vendors.length > 0) {
+      const cleaned = vendors.map((v: any) => {
+        const { _id, _creationTime, ...rest } = v || {}
+        return rest
+      })
+      setRows(cleaned as Array<Record<string, string>>)
+      setSelectedRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+    }
+  }, [vendors])
 
   useEffect(() => {
     setHasMounted(true)
@@ -126,9 +147,9 @@ const DashboardPage = () => {
   async function loadCsvFile(file: File) {
     const text = await file.text()
     const parsed = parseCSV(text)
-    setRows(parsed)
+    // Save to Convex; the table will update reactively from the query
     if (parsed.length > 0) {
-      setSelectedRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
+      await addVendors({ vendors: parsed })
     }
   }
 
@@ -156,7 +177,8 @@ const DashboardPage = () => {
     e.currentTarget.value = ''
   }
 
-  function handleMockData() {
+  async function handleMockData() {
+    console.log('Mock data button clicked')
     const csv = [
       'customer,contact_email,contact_phone,invoice_id,amount_due,due_date,days_late,notes',
       'Acme Co,payables@acme.test,+1-415-555-0199,1043,1240,2025-07-31,21,Good payer; prefers partials',
@@ -171,7 +193,19 @@ const DashboardPage = () => {
       'Juno Group,finance@juno.test,+1-415-555-0188,1052,990,2025-08-09,12,Confirms Friday'
     ].join('\n')
     const parsed = parseCSV(csv)
-    setRows(parsed)
+    console.log('Parsed CSV:', parsed)
+    // Save to Convex
+    if (parsed.length > 0 && addVendors) {
+      try {
+        console.log('Calling addVendors mutation...')
+        const result = await addVendors({ vendors: parsed })
+        console.log('Added vendors result:', result)
+      } catch (error) {
+        console.error('Error adding vendors:', error)
+      }
+    } else {
+      console.log('Cannot add vendors:', { parsed, addVendors })
+    }
     setActive('tab1')
     if (parsed.length > 0) {
       setSelectedRange({ startRow: 0, endRow: 0, startCol: 0, endCol: 0 })
@@ -414,7 +448,7 @@ const DashboardPage = () => {
           </div>
 
           {active === 'tab1' && (
-            rows.length === 0 ? (
+            (vendors.length === 0) ? (
               <div
                 className={dashStyles.glassFull}
                 onClick={openFilePicker}
@@ -564,5 +598,4 @@ const DashboardPage = () => {
 }
 
 export default DashboardPage
-
 
