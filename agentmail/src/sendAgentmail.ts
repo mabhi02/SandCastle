@@ -24,10 +24,9 @@ export async function sendAgentmailEmail(
   const html = looksHtml ? content : `<p>${escapeHtml(content)}</p>`;
 
   // Note: `inbox_id` must be an inbox you own; `to` is an array.
-  // API shape mirrors the docs: client.inboxes.messages.send({ inbox_id, to, subject, text, html, ... })
-  // and supports labels if you want categorization. :contentReference[oaicite:2]{index=2}
-  const sent = await client.inboxes.messages.send({
-    inbox_id: fromInbox,
+  // API shape mirrors the docs: client.inboxes.messages.send(inboxId, { to, subject, text, html, ... })
+  // and supports labels if you want categorization.
+  const sent = await client.inboxes.messages.send(fromInbox, {
     to: [toEmail],
     subject: `Message from ${fromInbox}`,
     text,
