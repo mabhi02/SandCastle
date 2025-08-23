@@ -4,9 +4,9 @@
     "private": true,
     "main": "dist/index.js",
     "scripts": {
-        "dev": "ts-node src/example.ts",
         "build": "tsc",
-        "start": "node dist/example.js"
+        "debt-collector": "ts-node src/final_debt_collector.ts",
+        "use-debt-collector": "ts-node src/use_debt_collector.ts"
     },
     "dependencies": {
         "agentmail": "^0.0.54",
