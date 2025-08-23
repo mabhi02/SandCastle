@@ -1,488 +1,183 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
-import StatusBadge from "@/components/ui/StatusBadge";
 import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
+import type { Id } from "@/convex/_generated/dataModel";
 
-export default function ARCollectionHub() {
+export default function Home() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"active" | "invoices" | "vendors" | "payments">("active");
-  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+  
+  // Get real data from Convex
+  const appUser = useQuery(api.users.getCurrentAppUser, {});
+  const overdueInvoices = useQuery(
+    api.dashboard.getOverdueInvoices,
+    appUser ? { userId: appUser._id } : "skip"
+  );
+  
+  const [selected, setSelected] = useState<Set<Id<"invoices">>>(new Set());
+  const startFollowUps = useMutation(api.collection.startFollowUps);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/signin");
+  // For development: skip authentication redirect
+  // useEffect(() => {
+  //   if (!isLoading && !isAuthenticated) {
+  //     router.push("/signin");
+  //   }
+  // }, [isAuthenticated, isLoading, router]);
+
+  const handleSelectAll = () => {
+    if (overdueInvoices) {
+      if (selected.size === overdueInvoices.length) {
+        setSelected(new Set());
+      } else {
+        setSelected(new Set(overdueInvoices.map(inv => inv._id)));
+      }
     }
-  }, [isAuthenticated, isLoading, router]);
+  };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg text-gray-500">Loading...</div>
-      </div>
-    );
-  }
+  const handleSelectOne = (id: Id<"invoices">) => {
+    const newSet = new Set(selected);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelected(newSet);
+  };
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  // Mock data - would be replaced with real Convex queries
-  const activeCalls = [
-    {
-      id: "call-1",
-      vendor: "ABC Supply Co.",
-      invoice: "INV-2024-001",
-      amount: 2500,
-      status: "negotiating",
-      duration: "3:45",
-      transcript: "Discussing payment terms...",
-      aiScore: 95,
-    },
-    {
-      id: "call-2",
-      vendor: "Tech Solutions",
-      invoice: "INV-2024-002",
-      amount: 4200,
-      status: "calling",
-      duration: "0:15",
-      transcript: "Dialing...",
-      aiScore: 88,
-    },
-  ];
-
-  const invoices = [
-    {
-      id: "INV-001",
-      vendor: "ABC Supply Co.",
-      amount: 5200,
-      daysOverdue: 14,
-      status: "Overdue" as const,
-      aiScore: 95,
-      lastAttempt: "2 hours ago",
-      nextAction: "Call scheduled 3pm",
-      callStatus: "active",
-    },
-    {
-      id: "INV-002",
-      vendor: "Tech Solutions Inc.",
-      amount: 3500,
-      daysOverdue: 10,
-      status: "InProgress" as const,
-      aiScore: 88,
-      lastAttempt: "Today 9am",
-      nextAction: "Payment link sent",
-      callStatus: "idle",
-    },
-    {
-      id: "INV-003",
-      vendor: "Global Logistics",
-      amount: 8900,
-      daysOverdue: 30,
-      status: "Overdue" as const,
-      aiScore: 82,
-      lastAttempt: "Yesterday",
-      nextAction: "Follow-up tomorrow",
-      callStatus: "idle",
-    },
-    {
-      id: "INV-004",
-      vendor: "Prime Vendors",
-      amount: 2100,
-      daysOverdue: 5,
-      status: "PromiseToPay" as const,
-      aiScore: 75,
-      lastAttempt: "1 hour ago",
-      nextAction: "Expecting payment",
-      callStatus: "completed",
-    },
-  ];
-
-  const vendors = [
-    {
-      id: "V-001",
-      name: "ABC Supply Co.",
-      outstanding: 12500,
-      invoiceCount: 3,
-      avgDaysLate: 12,
-      contactability: "High",
-      lastPayment: "30 days ago",
-      preferredChannel: "voice",
-      status: "active",
-    },
-    {
-      id: "V-002",
-      name: "Tech Solutions Inc.",
-      outstanding: 8200,
-      invoiceCount: 2,
-      avgDaysLate: 8,
-      contactability: "Medium",
-      lastPayment: "15 days ago",
-      preferredChannel: "email",
-      status: "idle",
-    },
-  ];
-
-  const payments = [
-    {
-      id: "PAY-001",
-      vendor: "XYZ Corp",
-      invoice: "INV-2023-998",
-      amount: 2500,
-      status: "succeeded" as const,
-      method: "Payment Link",
-      timestamp: "10 min ago",
-    },
-    {
-      id: "PAY-002",
-      vendor: "Metro Services",
-      invoice: "INV-2023-999",
-      amount: 1200,
-      status: "sent" as const,
-      method: "Email Link",
-      timestamp: "1 hour ago",
-    },
-  ];
+  const handleStartFollowUps = async () => {
+    if (selected.size === 0) return;
+    
+    setSubmitting(true);
+    try {
+      await startFollowUps({ invoiceIds: Array.from(selected) });
+      setSelected(new Set());
+    } catch (error) {
+      console.error("Failed to start follow-ups:", error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900">🏰 SandCastle AR Collection</h1>
-            <div className="flex items-center space-x-2 text-sm">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
-              <span className="text-gray-600">{activeCalls.length} Active Calls</span>
-              <span className="text-gray-400">|</span>
-              <span className="text-gray-600">$45,200 Outstanding</span>
-              <span className="text-gray-400">|</span>
-              <span className="text-green-600 font-medium">$8,420 Collected Today</span>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Simple Header */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <h1 className="text-2xl font-bold">SandCastle Collections</h1>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Action Bar */}
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold">Overdue Invoices</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Select invoices and start automated follow-ups
+            </p>
           </div>
           <button
-            onClick={() => router.push("/signin")}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            onClick={handleStartFollowUps}
+            disabled={selected.size === 0 || submitting}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              selected.size === 0 || submitting
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
           >
-            Sign Out
+            {submitting ? "Starting..." : `Start Follow-ups (${selected.size})`}
           </button>
         </div>
-      </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex space-x-8">
-          {[
-            { id: "active", label: "Active Calls", count: activeCalls.length },
-            { id: "invoices", label: "Invoices", count: invoices.length },
-            { id: "vendors", label: "Vendors", count: vendors.length },
-            { id: "payments", label: "Payments", count: payments.length },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`py-3 px-1 border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              <span className="font-medium">{tab.label}</span>
-              <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100">
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-auto p-6">
-        {/* Active Calls Table */}
-        {activeTab === "active" && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI Score</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Live Transcript</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {activeCalls.map((call) => (
-                    <tr key={call.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center space-x-2">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                          </span>
-                          <span className="text-sm font-medium text-green-600">
-                            {call.status}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium">{call.vendor}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{call.invoice}</td>
-                      <td className="px-4 py-3 text-sm font-medium">${call.amount.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{call.duration}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-700">
-                          {call.aiScore}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-gray-600 italic max-w-xs truncate">
-                          {call.transcript}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex space-x-2">
-                          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                            Listen
-                          </button>
-                          <button className="text-purple-600 hover:text-purple-700 text-sm font-medium">
-                            Send Link
-                          </button>
-                          <button className="text-red-600 hover:text-red-700 text-sm font-medium">
-                            End
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Invoices Table */}
-        {activeTab === "invoices" && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex space-x-2">
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-                  Queue Selected for AI
-                </button>
-                <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">
-                  Send Payment Links
-                </button>
-              </div>
-              <div className="text-sm text-gray-600">
-                {selectedInvoices.size > 0 && `${selectedInvoices.size} selected`}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left">
-                      <input type="checkbox" className="rounded" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Live</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI Priority</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Overdue</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Attempt</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Action</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {invoices.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          className="rounded"
-                          checked={selectedInvoices.has(invoice.id)}
-                          onChange={() => {
-                            const newSet = new Set(selectedInvoices);
-                            if (newSet.has(invoice.id)) {
-                              newSet.delete(invoice.id);
-                            } else {
-                              newSet.add(invoice.id);
-                            }
-                            setSelectedInvoices(newSet);
-                          }}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        {invoice.callStatus === "active" && (
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                          </span>
-                        )}
-                        {invoice.callStatus === "completed" && (
-                          <span className="text-green-600">✓</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${
-                          invoice.aiScore >= 90 ? "bg-green-100 text-green-700" :
-                          invoice.aiScore >= 75 ? "bg-yellow-100 text-yellow-700" :
-                          "bg-orange-100 text-orange-700"
-                        }`}>
-                          {invoice.aiScore}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium">{invoice.id}</td>
-                      <td className="px-4 py-3 text-sm">{invoice.vendor}</td>
-                      <td className="px-4 py-3 text-sm font-medium">${invoice.amount.toLocaleString()}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-sm font-medium ${
-                          invoice.daysOverdue > 20 ? "text-red-600" :
-                          invoice.daysOverdue > 10 ? "text-orange-600" :
-                          "text-yellow-600"
-                        }`}>
-                          {invoice.daysOverdue} days
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={invoice.status} />
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{invoice.lastAttempt}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{invoice.nextAction}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex space-x-2">
-                          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                            Collect
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-700 text-sm">
-                            Details
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Vendors Table */}
-        {activeTab === "vendors" && (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+        {/* Simple Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="min-w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={overdueInvoices && overdueInvoices.length > 0 && selected.size === overdueInvoices.length}
+                    onChange={handleSelectAll}
+                    className="rounded"
+                  />
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Invoice
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Vendor
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Amount Due
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Days Overdue
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Contact
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {!overdueInvoices ? (
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Outstanding</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Days Late</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contactability</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Payment</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Channel</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    Loading invoices...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {vendors.map((vendor) => (
-                  <tr key={vendor.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      {vendor.status === "active" && (
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                        </span>
-                      )}
+              ) : overdueInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    No overdue invoices
+                  </td>
+                </tr>
+              ) : (
+                overdueInvoices.map((invoice) => (
+                  <tr key={invoice._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(invoice._id)}
+                        onChange={() => handleSelectOne(invoice._id)}
+                        className="rounded"
+                      />
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium">{vendor.name}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-red-600">
-                      ${vendor.outstanding.toLocaleString()}
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      {invoice.invoiceNo}
                     </td>
-                    <td className="px-4 py-3 text-sm">{vendor.invoiceCount}</td>
-                    <td className="px-4 py-3 text-sm">{vendor.avgDaysLate} days</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        vendor.contactability === "High" ? "bg-green-100 text-green-700" :
-                        vendor.contactability === "Medium" ? "bg-yellow-100 text-yellow-700" :
-                        "bg-red-100 text-red-700"
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {invoice.vendorName}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      ${((invoice.amountCents - invoice.paidCents) / 100).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`font-medium ${
+                        invoice.daysLate > 30 ? "text-red-600" :
+                        invoice.daysLate > 15 ? "text-orange-600" :
+                        "text-yellow-600"
                       }`}>
-                        {vendor.contactability}
+                        {invoice.daysLate} days
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{vendor.lastPayment}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className="text-gray-600">
-                        {vendor.preferredChannel === "voice" ? "📞" : "📧"} {vendor.preferredChannel}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                          Contact
-                        </button>
-                        <button className="text-gray-600 hover:text-gray-700 text-sm">
-                          History
-                        </button>
-                      </div>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {invoice.lastOutcome || "Never contacted"}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Payments Table */}
-        {activeTab === "payments" && (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {payments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-600">{payment.timestamp}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={payment.status} type="payment" />
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium">{payment.vendor}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{payment.invoice}</td>
-                    <td className="px-4 py-3 text-sm font-medium">${payment.amount.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{payment.method}</td>
-                    <td className="px-4 py-3">
-                      <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
