@@ -1,5 +1,5 @@
 :root {
-  font-size: 62.5%;
+  font-size: 78.125%;
   --background: rgb(17, 17, 17);
   --bg-opaque: rgb(17, 17, 17, 0.25);
   --background-light: rgb(35, 35, 35);
@@ -30,6 +30,7 @@ body {
   max-width: 100%;
   scroll-behavior: auto;
   font-size: var(--text-sm);
+  overflow-x: hidden;
 }
 
 body {
@@ -72,7 +73,7 @@ input[type="reset"] {
 .section-wrapper {
   position: relative;
   z-index: 10;
-  max-width: 1150px;
+  max-width: 920px;
   margin: auto;
   padding: 9.6rem;
   overflow: hidden;

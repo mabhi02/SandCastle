@@ -7,6 +7,7 @@ import dashStyles from '@/components/utils/dashboard.module.scss'
 import { getSession, clearSession } from '@/components/utils/auth'
 import { Socials } from '@/components/nav/Socials'
 import { useMutation, useQuery, useAction } from 'convex/react'
+import ContourCanvas from '@/components/utils/ContourCanvas'
 import { api } from '@/convex/_generated/api'
 
 const DashboardPage = () => {
@@ -203,6 +204,14 @@ const DashboardPage = () => {
           <div className={dashStyles.mainGrid}>
             <div className={dashStyles.tableWrapper}>
               <div className={dashStyles.tableHeader}>
+                <ContourCanvas 
+                  maxFps={30}
+                  thresholdIncrement={5}
+                  resolution={6}
+                  noiseScales={[0.06, 0.12, 0.24]}
+                  noiseWeights={[1, 0.5, 0.35]}
+                  motionJitter={0.0008}
+                />
                 <div className={dashStyles.tableTitle}>Outstanding Invoices</div>
                 <div className={dashStyles.actionButtons}>
                   <button className={dashStyles.headerBtn}>Auto-Dial Queue</button>

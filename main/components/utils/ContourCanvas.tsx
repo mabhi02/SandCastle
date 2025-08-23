@@ -9,6 +9,16 @@ type Options = {
   resolution?: number
   baseZOffset?: number
   lineColor?: string
+  // Higher values -> smaller features; three-octave control
+  noiseScales?: [number, number, number]
+  // Weights for each octave
+  noiseWeights?: [number, number, number]
+  // Adds random step jitter to motion for a more jagged feel
+  motionJitter?: number
+  // Inset the drawing region away from edges to avoid hard borders
+  edgeInsetPx?: number
+  // Fade amount at edges (px) to blend into background
+  edgeFadePx?: number
 }
 
 // Minimal port of the AVM canvas effect for React
@@ -19,7 +29,12 @@ export const ContourCanvas = ({
   thickLineThresholdMultiple = 4,
   resolution = 8,
   baseZOffset = 0.00025,
-  lineColor = '#EDEDED40'
+  lineColor = '#EDEDED40',
+  noiseScales = [0.03, 0.06, 0.12],
+  noiseWeights = [1, 0.4, 0.2],
+  motionJitter = 0,
+  edgeInsetPx = 0,
+  edgeFadePx = 0
 }: Options) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -38,6 +53,7 @@ export const ContourCanvas = ({
     let noiseMin = 100
     let noiseMax = 0
     let noiseMod: any
+    let parentBgColor = 'rgba(0,0,0,1)'
 
     const mousePos = { x: -999, y: -999 }
 
@@ -62,6 +78,14 @@ export const ContourCanvas = ({
       const canvas = canvasRef.current
       const container = containerRef.current
       if (!canvas || !container || !ctx) return
+      // detect parent background to use for fade blending
+      try {
+        const parent = container.parentElement
+        if (parent) {
+          const cs = window.getComputedStyle(parent)
+          if (cs && cs.backgroundColor) parentBgColor = cs.backgroundColor
+        }
+      } catch {}
       const rect = container.getBoundingClientRect()
       canvas.width = rect.width * window.devicePixelRatio
       canvas.height = rect.height * window.devicePixelRatio
@@ -96,13 +120,15 @@ export const ContourCanvas = ({
     }
 
     function generateNoise() {
+      const [s1, s2, s3] = noiseScales
+      const [w1, w2, w3] = noiseWeights
       for (let y = 0; y < rows; y++) {
         inputValues[y] = []
         for (let x = 0; x <= cols; x++) {
           // Fractal Brownian Motion: multiple octaves for more jagged detail
-          const n1 = noiseMod.noise(x * 0.03, y * 0.03, zOffset + zBoostValues[y]?.[x])
-          const n2 = noiseMod.noise(x * 0.06, y * 0.06, zOffset * 1.25 + zBoostValues[y]?.[x]) * 0.4
-          const n3 = noiseMod.noise(x * 0.12, y * 0.12, zOffset * 1.6 + zBoostValues[y]?.[x]) * 0.2
+          const n1 = noiseMod.noise(x * s1, y * s1, zOffset + zBoostValues[y]?.[x]) * w1
+          const n2 = noiseMod.noise(x * s2, y * s2, zOffset * 1.25 + zBoostValues[y]?.[x]) * w2
+          const n3 = noiseMod.noise(x * s3, y * s3, zOffset * 1.6 + zBoostValues[y]?.[x]) * w3
           const value = (n1 + n2 + n3) * 100
           inputValues[y][x] = value
           if (value < noiseMin) noiseMin = value
@@ -286,7 +312,19 @@ export const ContourCanvas = ({
       mouseOffset()
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
       // Slightly more aggressive global motion with subtle oscillation
-      zOffset += baseZOffset * (1.5 + Math.sin(performance.now() * 0.0003) * 0.5)
+      const jitter = motionJitter ? (Math.random() - 0.5) * motionJitter : 0
+      zOffset += baseZOffset * (1.5 + Math.sin(performance.now() * 0.0003) * 0.5) + jitter
+      // Clip to inset region to avoid hard borders
+      if (edgeInsetPx > 0 && canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect()
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(edgeInsetPx, edgeInsetPx, rect.width - edgeInsetPx * 2, rect.height - edgeInsetPx * 2)
+        ctx.clip()
+      } else {
+        ctx.save()
+      }
+
       generateNoise()
       const roundedNoiseMin = Math.floor(noiseMin / thresholdIncrement) * thresholdIncrement
       const roundedNoiseMax = Math.ceil(noiseMax / thresholdIncrement) * thresholdIncrement
@@ -294,11 +332,41 @@ export const ContourCanvas = ({
         currentThreshold = threshold
         renderAtThreshold()
       }
-      noiseMin = 100
-      noiseMax = 0
-
       // Draw grid and pluses at highest canvas z-index; auth card has CSS z-index higher than canvas container
       drawGrid()
+      ctx.restore()
+
+      // Edge fade overlay to blend lines with header background
+      if (edgeFadePx > 0 && canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect()
+        // Left
+        let g = ctx.createLinearGradient(0, 0, edgeFadePx, 0)
+        g.addColorStop(0, parentBgColor)
+        g.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.fillStyle = g
+        ctx.fillRect(0, 0, edgeFadePx, rect.height)
+        // Right
+        g = ctx.createLinearGradient(rect.width - edgeFadePx, 0, rect.width, 0)
+        g.addColorStop(0, 'rgba(0,0,0,0)')
+        g.addColorStop(1, parentBgColor)
+        ctx.fillStyle = g
+        ctx.fillRect(rect.width - edgeFadePx, 0, edgeFadePx, rect.height)
+        // Top
+        g = ctx.createLinearGradient(0, 0, 0, edgeFadePx)
+        g.addColorStop(0, parentBgColor)
+        g.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.fillStyle = g
+        ctx.fillRect(0, 0, rect.width, edgeFadePx)
+        // Bottom
+        g = ctx.createLinearGradient(0, rect.height - edgeFadePx, 0, rect.height)
+        g.addColorStop(0, 'rgba(0,0,0,0)')
+        g.addColorStop(1, parentBgColor)
+        ctx.fillStyle = g
+        ctx.fillRect(0, rect.height - edgeFadePx, rect.width, edgeFadePx)
+      }
+
+      noiseMin = 100
+      noiseMax = 0
     }
 
     init()

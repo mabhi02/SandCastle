@@ -170,17 +170,23 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--background-light);
+  position: relative;
+  overflow: hidden;
 }
 
 .tableTitle {
   color: var(--text);
   font-size: 1.1rem;
   font-weight: 600;
+  position: relative;
+  z-index: 1;
 }
 
 .actionButtons {
   display: flex;
   gap: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .headerBtn {
@@ -436,7 +442,7 @@
 }
 
 .callPanel {
-  background: var(--background);
+  background: #000;
   border: 1px solid var(--background-light);
   border-radius: 8px;
   padding: 20px;
@@ -445,17 +451,26 @@
   flex-direction: column;
 }
 
+// Make header area of the Live Call panel black behind the contour canvas
+.callPanel .panelHeader {
+  background: #000;
+}
+
 .panelHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
 }
 
 .panelTitle {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
+  position: relative;
+  z-index: 1;
 }
 
 .callStatus {
@@ -467,6 +482,8 @@
   border-radius: 12px;
   font-size: 0.75rem;
   color: #10b981;
+  position: relative;
+  z-index: 1;
 }
 
 .transcriptArea {
