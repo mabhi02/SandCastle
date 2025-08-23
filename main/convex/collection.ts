@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { Id } from "./_generated/dataModel";
 
 function formatToolSummary(tool: string, input: any, output: any): string {
   switch (tool) {
@@ -19,6 +19,29 @@ function formatToolSummary(tool: string, input: any, output: any): string {
 
 export const getActiveRun = query({
   args: { invoiceId: v.id("invoices") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      run: v.object({
+        _id: v.id("runs"),
+        startedAt: v.number(),
+        endedAt: v.optional(v.number()),
+        outcome: v.optional(v.string()),
+      }),
+      trace: v.array(
+        v.object({
+          time: v.string(),
+          tool: v.string(),
+          status: v.union(
+            v.literal("ok"),
+            v.literal("blocked"),
+            v.literal("error"),
+          ),
+          summary: v.string(),
+        }),
+      ),
+    })
+  ),
   handler: async (ctx, args) => {
     const run = await ctx.db
       .query("runs")
@@ -34,7 +57,12 @@ export const getActiveRun = query({
       .collect();
 
     return {
-      run,
+      run: {
+        _id: run._id,
+        startedAt: run.startedAt,
+        endedAt: run.endedAt,
+        outcome: run.outcome,
+      },
       trace: traceItems.map((t) => ({
         time: new Date(t.ts).toLocaleTimeString(),
         tool: t.tool,
@@ -50,6 +78,11 @@ export const canCollect = query({
     userId: v.id("app_users"),
     vendorId: v.id("vendors"),
   },
+  returns: v.object({
+    canCollect: v.boolean(),
+    reason: v.union(v.string(), v.null()),
+    attemptsRemaining: v.optional(v.number()),
+  }),
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     const vendor = await ctx.db.get(args.vendorId);
@@ -101,18 +134,24 @@ export const canCollect = query({
 // - add a simple trace item summarizing the transition
 export const startFollowUps = mutation({
   args: { invoiceIds: v.array(v.id("invoices")) },
+  returns: v.object({
+    queued: v.number(),
+    results: v.array(
+      v.object({
+        invoiceId: v.id("invoices"),
+        runId: v.union(v.id("runs"), v.null()),
+        skipped: v.optional(v.string()),
+      })
+    ),
+  }),
   handler: async (ctx, args) => {
-    // Require authentication for auditing, but don't hard fail if app_user profile is missing
-    const authUserId = await getAuthUserId(ctx);
-    if (!authUserId) throw new Error("Not authenticated");
-
     const now = Date.now();
-    const results: { invoiceId: string; runId: string | null; skipped?: string }[] = [];
+    const results: { invoiceId: Id<"invoices">; runId: Id<"runs"> | null; skipped?: string }[] = [];
 
     for (const invoiceId of args.invoiceIds) {
       const inv = await ctx.db.get(invoiceId);
       if (!inv) {
-        results.push({ invoiceId, runId: null, skipped: "missing" });
+      results.push({ invoiceId, runId: null, skipped: "missing" });
         continue;
       }
       // Create a run for this invoice

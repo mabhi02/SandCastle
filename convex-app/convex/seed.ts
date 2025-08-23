@@ -1,23 +1,13 @@
 import { internalMutation } from "./_generated/server";
-import { v } from "convex/values";
 
 export const seedData = internalMutation({
   args: {},
-  returns: v.object({
-    message: v.string(),
-    stats: v.object({
-      users: v.number(),
-      vendors: v.number(),
-      invoices: v.number(),
-      overdueInvoices: v.number(),
-    }),
-  }),
   handler: async (ctx) => {
     // Check if we already have data
     const existingInvoices = await ctx.db.query("invoices").first();
     if (existingInvoices) {
       console.log("Data already exists, skipping seed");
-      return { message: "Data already exists", stats: { users: 0, vendors: 0, invoices: 0, overdueInvoices: 0 } };
+      return { message: "Data already exists" };
     }
 
     // Create a test user with all required fields

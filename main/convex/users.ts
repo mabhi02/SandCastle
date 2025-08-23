@@ -1,6 +1,7 @@
 import { query, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { Id } from "./_generated/dataModel";
 
 export async function getAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
   const authUserId = await getAuthUserId(ctx);
@@ -10,7 +11,7 @@ export async function getAuthenticatedUser(ctx: QueryCtx | MutationCtx) {
   }
   
   // authUserId is the ID from the users table (Convex Auth)
-  const user = await ctx.db.get(authUserId as any);
+  const user = await ctx.db.get(authUserId as Id<"users">);
   return user;
 }
 
@@ -105,7 +106,7 @@ export const getCurrentAppUser = query({
     if (!user) {
       user = await ctx.db
         .query("app_users")
-        .filter((q) => q.eq(q.field("authUserId"), "seed_user_001"))
+        .withIndex("by_authUserId", (q) => q.eq("authUserId", "seed_user_001"))
         .unique();
     }
     
@@ -144,5 +145,4 @@ export const getInvoiceById = query({
     };
   },
 });
-
 

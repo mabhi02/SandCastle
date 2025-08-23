@@ -2,8 +2,26 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getOrCreateAppUser } from "./users";
 
+const invoiceState = v.union(
+  v.literal("Overdue"),
+  v.literal("InProgress"),
+  v.literal("PromiseToPay"),
+  v.literal("PartialPaid"),
+  v.literal("Paid"),
+  v.literal("Dispute"),
+  v.literal("Reassign"),
+  v.literal("Callback"),
+  v.literal("DNC")
+);
+
 export const getInvoiceMetrics = query({
   args: { userId: v.id("app_users") },
+  returns: v.object({
+    overdue: v.number(),
+    inProgress: v.number(),
+    paid: v.number(),
+    totalOutstandingCents: v.number(),
+  }),
   handler: async (ctx, args) => {
     const invoices = await ctx.db
       .query("invoices")
@@ -28,8 +46,20 @@ export const getInvoiceMetrics = query({
 
 export const addVendors = mutation({
   args: {
-    vendors: v.array(v.any()),
+    vendors: v.array(
+      v.object({
+        customer: v.optional(v.string()),
+        contact_email: v.optional(v.string()),
+        contact_phone: v.optional(v.string()),
+        invoice_id: v.optional(v.string()),
+        amount_due: v.optional(v.string()),
+        due_date: v.optional(v.string()),
+        days_late: v.optional(v.string()),
+        notes: v.optional(v.string()),
+      })
+    ),
   },
+  returns: v.object({ vendorsAdded: v.number(), invoicesAdded: v.number() }),
   handler: async (ctx, args) => {
     // Get or create app user (handles both auth and demo scenarios)
     const appUser = await getOrCreateAppUser(ctx);
@@ -71,7 +101,7 @@ export const addVendors = mutation({
           userId: appUser._id,
           vendorId,
           invoiceNo: row.invoice_id,
-          amountCents: parseFloat(row.amount_due || "0") * 100, // Convert to cents
+          amountCents: Math.round(parseFloat(row.amount_due || "0") * 100), // Convert to cents
           dueDateISO: row.due_date || new Date().toISOString().split("T")[0],
           state: parseInt(row.days_late || "0") > 0 ? "Overdue" : "InProgress",
           paidCents: 0,
@@ -93,6 +123,16 @@ export const addVendors = mutation({
 
 export const getVendors = query({
   args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("vendors"),
+      customer: v.string(),
+      contact_email: v.optional(v.string()),
+      contact_phone: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      _creationTime: v.number(),
+    })
+  ),
   handler: async (ctx) => {
     // For development, just get all vendors regardless of user
     // In production, you'd filter by authenticated user
@@ -113,6 +153,27 @@ export const getVendors = query({
 
 export const getOverdueInvoices = query({
   args: { userId: v.id("app_users") },
+  returns: v.array(
+    v.object({
+      _id: v.id("invoices"),
+      vendorName: v.string(),
+      vendorPhone: v.optional(v.string()),
+      daysLate: v.number(),
+      attemptsThisWeek: v.number(),
+      lastOutcome: v.optional(v.string()),
+      userId: v.id("app_users"),
+      vendorId: v.id("vendors"),
+      invoiceNo: v.string(),
+      amountCents: v.number(),
+      dueDateISO: v.string(),
+      state: invoiceState,
+      paidCents: v.number(),
+      lastStateChangeAt: v.number(),
+      memo: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })
+  ),
   handler: async (ctx, args) => {
     const invoices = await ctx.db
       .query("invoices")
@@ -135,7 +196,18 @@ export const getOverdueInvoices = query({
         );
 
         return {
-          ...inv,
+          _id: inv._id,
+          userId: inv.userId,
+          vendorId: inv.vendorId,
+          invoiceNo: inv.invoiceNo,
+          amountCents: inv.amountCents,
+          dueDateISO: inv.dueDateISO,
+          state: inv.state,
+          paidCents: inv.paidCents,
+          lastStateChangeAt: inv.lastStateChangeAt,
+          memo: inv.memo,
+          createdAt: inv.createdAt,
+          updatedAt: inv.updatedAt,
           vendorName: vendor?.name ?? "Unknown",
           vendorPhone: vendor?.contactPhone,
           daysLate,
@@ -148,5 +220,3 @@ export const getOverdueInvoices = query({
     return enriched.sort((a, b) => b.daysLate - a.daysLate);
   },
 });
-
-

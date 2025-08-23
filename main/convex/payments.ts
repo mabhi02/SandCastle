@@ -3,6 +3,24 @@ import { v } from "convex/values";
 
 export const getPaymentStatus = query({
   args: { invoiceId: v.id("invoices") },
+  returns: v.object({
+    totalPaidCents: v.number(),
+    pendingPayments: v.array(
+      v.object({
+        provider: v.string(),
+        providerRef: v.string(),
+        amountCents: v.number(),
+        status: v.union(
+          v.literal("created"),
+          v.literal("sent"),
+          v.literal("succeeded"),
+          v.literal("failed")
+        ),
+        createdAt: v.number(),
+      })
+    ),
+    lastPaymentAt: v.union(v.number(), v.null()),
+  }),
   handler: async (ctx, args) => {
     const payments = await ctx.db
       .query("payments")
@@ -13,9 +31,15 @@ export const getPaymentStatus = query({
       .filter((p) => p.status === "succeeded")
       .reduce((sum, p) => sum + p.amountCents, 0);
 
-    const pendingPayments = payments.filter(
-      (p) => p.status === "created" || p.status === "sent"
-    );
+    const pendingPayments = payments
+      .filter((p) => p.status === "created" || p.status === "sent")
+      .map((p) => ({
+        provider: p.provider,
+        providerRef: p.providerRef,
+        amountCents: p.amountCents,
+        status: p.status,
+        createdAt: p.createdAt,
+      }));
 
     return {
       totalPaidCents,
@@ -32,6 +56,17 @@ export const getNegotiationContext = query({
     vendorId: v.id("vendors"),
     invoiceId: v.id("invoices"),
   },
+  returns: v.object({
+    vendorName: v.union(v.string(), v.null()),
+    preferredChannel: v.union(v.literal("voice"), v.literal("email")),
+    historicalMode: v.union(v.literal("full_today"), v.literal("partial_today"), v.literal("promise"), v.null()),
+    lastOutcome: v.union(v.string(), v.null()),
+    minPartialCents: v.number(),
+    maxInstallments: v.number(),
+    maxDaysToSettle: v.number(),
+    invoiceAmountCents: v.union(v.number(), v.null()),
+    invoiceNo: v.union(v.string(), v.null()),
+  }),
   handler: async (ctx, args) => {
     const vendor = await ctx.db.get(args.vendorId);
     const invoice = await ctx.db.get(args.invoiceId);
@@ -52,7 +87,7 @@ export const getNegotiationContext = query({
     );
 
     return {
-      vendorName: vendor?.name,
+      vendorName: vendor?.name ?? null,
       preferredChannel: vendor?.preferredChannel ?? "voice",
       historicalMode: vendorState?.historicalMode ?? null,
       lastOutcome: vendorState?.lastOutcome ?? null,
@@ -64,5 +99,3 @@ export const getNegotiationContext = query({
     } as const;
   },
 });
-
-

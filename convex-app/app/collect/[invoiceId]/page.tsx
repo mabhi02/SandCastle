@@ -3,14 +3,15 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 export default function CollectPage() {
   const params = useParams<{ invoiceId: string }>();
-  const invoiceId = params?.invoiceId as any; // Function ref expects Id<"invoices">
+  const invoiceId = params?.invoiceId as unknown as Id<"invoices">;
 
-  const invoice = useQuery(api.users.getInvoiceById, invoiceId ? { invoiceId } : undefined);
-  const run = useQuery(api.collection.getActiveRun, invoiceId ? { invoiceId } : undefined);
-  const paymentStatus = useQuery(api.payments.getPaymentStatus, invoiceId ? { invoiceId } : undefined);
+  const invoice = useQuery(api.users.getInvoiceById, invoiceId ? { invoiceId } : "skip");
+  const run = useQuery(api.collection.getActiveRun, invoiceId ? { invoiceId } : "skip");
+  const paymentStatus = useQuery(api.payments.getPaymentStatus, invoiceId ? { invoiceId } : "skip");
 
   if (!invoice || !run || !paymentStatus) return <p>Loading…</p>;
   if (invoice === null) return <p>Invoice not found</p>;
@@ -58,5 +59,4 @@ export default function CollectPage() {
     </main>
   );
 }
-
 

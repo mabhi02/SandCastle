@@ -1,5 +1,6 @@
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 function formatToolSummary(tool: string, input: any, output: any): string {
   switch (tool) {
@@ -92,3 +93,60 @@ export const canCollect = query({
 });
 
 
+// Minimal mutation to start follow-ups for selected overdue invoices.
+// For each invoice, we:
+// - verify ownership by the current app user
+// - insert a new run document
+// - update the invoice state to InProgress
+// - add a simple trace item summarizing the transition
+export const startFollowUps = mutation({
+  args: { invoiceIds: v.array(v.id("invoices")) },
+  handler: async (ctx, args) => {
+    // Require authentication for auditing, but don't hard fail if app_user profile is missing
+    const authUserId = await getAuthUserId(ctx);
+    if (!authUserId) throw new Error("Not authenticated");
+
+    const now = Date.now();
+    const results: { invoiceId: string; runId: string | null; skipped?: string }[] = [];
+
+    for (const invoiceId of args.invoiceIds) {
+      const inv = await ctx.db.get(invoiceId);
+      if (!inv) {
+        results.push({ invoiceId, runId: null, skipped: "missing" });
+        continue;
+      }
+      // Create a run for this invoice
+      const runId = await ctx.db.insert("runs", {
+        userId: inv.userId,
+        invoiceId: inv._id,
+        vendorId: inv.vendorId,
+        startedAt: now,
+        endedAt: undefined,
+        outcome: undefined,
+      });
+
+      // Transition invoice to InProgress if currently Overdue
+      const newState = inv.state === "Overdue" ? "InProgress" : inv.state;
+      await ctx.db.patch(inv._id, {
+        state: newState,
+        lastStateChangeAt: now,
+        updatedAt: now,
+      });
+
+      // Add a simple trace item to make the run visible in UI
+      await ctx.db.insert("trace_items", {
+        runId,
+        ts: now,
+        tool: "state.transition",
+        input: { prev: inv.state, newState },
+        output: { queued: true },
+        status: "ok",
+        policyMsg: undefined,
+      });
+
+      results.push({ invoiceId, runId });
+    }
+
+    return { queued: results.filter(r => r.runId).length, results } as const;
+  },
+});

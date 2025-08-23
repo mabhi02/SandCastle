@@ -8,6 +8,7 @@ export const storeTranscriptChunk = mutation({
     text: v.string(),
     timestamp: v.number(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.insert("trace_items", {
       runId: args.runId,
@@ -18,11 +19,19 @@ export const storeTranscriptChunk = mutation({
       status: "ok",
       policyMsg: undefined,
     });
+    return null;
   },
 });
 
 export const getLiveTranscript = query({
   args: { runId: v.id("runs") },
+  returns: v.array(
+    v.object({
+      speaker: v.union(v.literal("agent"), v.literal("customer")),
+      text: v.string(),
+      time: v.string(),
+    })
+  ),
   handler: async (ctx, args) => {
     const chunks = await ctx.db
       .query("trace_items")
@@ -38,5 +47,4 @@ export const getLiveTranscript = query({
     }));
   },
 });
-
 
