@@ -1,26 +1,23 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
-import AppLayout from "@/components/AppLayout";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
-export default function CommandCenter() {
+export default function ARCollectionHub() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"active" | "invoices" | "vendors" | "payments">("active");
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push("/signin");
     }
   }, [isAuthenticated, isLoading, router]);
-
-  // For now, we'll use placeholder data until we have proper user context
-  // const metrics = useQuery(api.dashboard.getInvoiceMetrics, { userId: "placeholder" });
-  // const overdueInvoices = useQuery(api.dashboard.getOverdueInvoices, { userId: "placeholder" });
 
   if (isLoading) {
     return (
@@ -34,272 +31,458 @@ export default function CommandCenter() {
     return null;
   }
 
-  // Placeholder data for UI development
-  const metrics = {
-    overdue: 12,
-    inProgress: 5,
-    paid: 28,
-    totalOutstandingCents: 4523400,
-  };
-
-  const activeCollections = [
+  // Mock data - would be replaced with real Convex queries
+  const activeCalls = [
     {
-      id: "1",
-      vendorName: "ABC Supply Co.",
-      status: "calling" as const,
-      duration: "2:34",
-      amount: 1250.00,
+      id: "call-1",
+      vendor: "ABC Supply Co.",
+      invoice: "INV-2024-001",
+      amount: 2500,
+      status: "negotiating",
+      duration: "3:45",
+      transcript: "Discussing payment terms...",
+      aiScore: 95,
     },
     {
-      id: "2",
-      vendorName: "Tech Solutions Inc.",
-      status: "negotiating" as const,
-      duration: "5:12",
-      amount: 3200.00,
-    },
-    {
-      id: "3",
-      vendorName: "Global Logistics",
-      status: "sending_payment" as const,
-      duration: "0:45",
-      amount: 890.00,
+      id: "call-2",
+      vendor: "Tech Solutions",
+      invoice: "INV-2024-002",
+      amount: 4200,
+      status: "calling",
+      duration: "0:15",
+      transcript: "Dialing...",
+      aiScore: 88,
     },
   ];
 
-  const recentActivity = [
+  const invoices = [
     {
-      id: "1",
-      time: "2 min ago",
-      type: "payment_received",
+      id: "INV-001",
+      vendor: "ABC Supply Co.",
+      amount: 5200,
+      daysOverdue: 14,
+      status: "Overdue" as const,
+      aiScore: 95,
+      lastAttempt: "2 hours ago",
+      nextAction: "Call scheduled 3pm",
+      callStatus: "active",
+    },
+    {
+      id: "INV-002",
+      vendor: "Tech Solutions Inc.",
+      amount: 3500,
+      daysOverdue: 10,
+      status: "InProgress" as const,
+      aiScore: 88,
+      lastAttempt: "Today 9am",
+      nextAction: "Payment link sent",
+      callStatus: "idle",
+    },
+    {
+      id: "INV-003",
+      vendor: "Global Logistics",
+      amount: 8900,
+      daysOverdue: 30,
+      status: "Overdue" as const,
+      aiScore: 82,
+      lastAttempt: "Yesterday",
+      nextAction: "Follow-up tomorrow",
+      callStatus: "idle",
+    },
+    {
+      id: "INV-004",
+      vendor: "Prime Vendors",
+      amount: 2100,
+      daysOverdue: 5,
+      status: "PromiseToPay" as const,
+      aiScore: 75,
+      lastAttempt: "1 hour ago",
+      nextAction: "Expecting payment",
+      callStatus: "completed",
+    },
+  ];
+
+  const vendors = [
+    {
+      id: "V-001",
+      name: "ABC Supply Co.",
+      outstanding: 12500,
+      invoiceCount: 3,
+      avgDaysLate: 12,
+      contactability: "High",
+      lastPayment: "30 days ago",
+      preferredChannel: "voice",
+      status: "active",
+    },
+    {
+      id: "V-002",
+      name: "Tech Solutions Inc.",
+      outstanding: 8200,
+      invoiceCount: 2,
+      avgDaysLate: 8,
+      contactability: "Medium",
+      lastPayment: "15 days ago",
+      preferredChannel: "email",
+      status: "idle",
+    },
+  ];
+
+  const payments = [
+    {
+      id: "PAY-001",
       vendor: "XYZ Corp",
-      amount: 2500.00,
+      invoice: "INV-2023-998",
+      amount: 2500,
+      status: "succeeded" as const,
+      method: "Payment Link",
+      timestamp: "10 min ago",
     },
     {
-      id: "2", 
-      time: "15 min ago",
-      type: "call_completed",
-      vendor: "ABC Supply",
-      outcome: "Promise to pay tomorrow",
-    },
-    {
-      id: "3",
-      time: "1 hour ago",
-      type: "email_sent",
-      vendor: "Tech Solutions",
-      action: "Payment link sent",
+      id: "PAY-002",
+      vendor: "Metro Services",
+      invoice: "INV-2023-999",
+      amount: 1200,
+      status: "sent" as const,
+      method: "Email Link",
+      timestamp: "1 hour ago",
     },
   ];
 
   return (
-    <AppLayout>
-      <div className="p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Command Center</h1>
-          <p className="text-gray-500 mt-1">AI Collection Agent Overview</p>
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold text-gray-900">🏰 SandCastle AR Collection</h1>
+            <div className="flex items-center space-x-2 text-sm">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
+              <span className="text-gray-600">{activeCalls.length} Active Calls</span>
+              <span className="text-gray-400">|</span>
+              <span className="text-gray-600">$45,200 Outstanding</span>
+              <span className="text-gray-400">|</span>
+              <span className="text-green-600 font-medium">$8,420 Collected Today</span>
+            </div>
+          </div>
+          <button
+            onClick={() => router.push("/signin")}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Sign Out
+          </button>
         </div>
+      </div>
 
-        {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <MetricCard
-            title="Overdue Invoices"
-            value={metrics.overdue}
-            icon="🔴"
-            trend="+2"
-            trendUp={false}
-          />
-          <MetricCard
-            title="In Progress"
-            value={metrics.inProgress}
-            icon="🔄"
-            trend="Active"
-            trendUp={true}
-          />
-          <MetricCard
-            title="Paid Today"
-            value={metrics.paid}
-            icon="✅"
-            trend="+12%"
-            trendUp={true}
-          />
-          <MetricCard
-            title="Outstanding"
-            value={`$${(metrics.totalOutstandingCents / 100).toLocaleString()}`}
-            icon="💰"
-            trend="-$5,234"
-            trendUp={true}
-          />
+      {/* Tab Navigation */}
+      <div className="bg-white border-b border-gray-200 px-6">
+        <div className="flex space-x-8">
+          {[
+            { id: "active", label: "Active Calls", count: activeCalls.length },
+            { id: "invoices", label: "Invoices", count: invoices.length },
+            { id: "vendors", label: "Vendors", count: vendors.length },
+            { id: "payments", label: "Payments", count: payments.length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`py-3 px-1 border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <span className="font-medium">{tab.label}</span>
+              <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100">
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Active AI Sessions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Active Collections */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Active AI Sessions</h2>
-                <span className="flex items-center space-x-2">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                  </span>
-                  <span className="text-sm text-gray-500">{activeCollections.length} Active</span>
-                </span>
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-auto p-6">
+        {/* Active Calls Table */}
+        {activeTab === "active" && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI Score</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Live Transcript</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {activeCalls.map((call) => (
+                    <tr key={call.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center space-x-2">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                          </span>
+                          <span className="text-sm font-medium text-green-600">
+                            {call.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium">{call.vendor}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{call.invoice}</td>
+                      <td className="px-4 py-3 text-sm font-medium">${call.amount.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{call.duration}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 text-xs font-bold rounded-full bg-green-100 text-green-700">
+                          {call.aiScore}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-600 italic max-w-xs truncate">
+                          {call.transcript}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex space-x-2">
+                          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                            Listen
+                          </button>
+                          <button className="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                            Send Link
+                          </button>
+                          <button className="text-red-600 hover:text-red-700 text-sm font-medium">
+                            End
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Invoices Table */}
+        {activeTab === "invoices" && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex space-x-2">
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                  Queue Selected for AI
+                </button>
+                <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">
+                  Send Payment Links
+                </button>
+              </div>
+              <div className="text-sm text-gray-600">
+                {selectedInvoices.size > 0 && `${selectedInvoices.size} selected`}
               </div>
             </div>
-            <div className="p-6 space-y-4">
-              {activeCollections.map((collection) => (
-                <ActiveCollectionCard key={collection.id} collection={collection} />
-              ))}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left">
+                      <input type="checkbox" className="rounded" />
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Live</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI Priority</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Overdue</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Attempt</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Action</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {invoices.map((invoice) => (
+                    <tr key={invoice.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={selectedInvoices.has(invoice.id)}
+                          onChange={() => {
+                            const newSet = new Set(selectedInvoices);
+                            if (newSet.has(invoice.id)) {
+                              newSet.delete(invoice.id);
+                            } else {
+                              newSet.add(invoice.id);
+                            }
+                            setSelectedInvoices(newSet);
+                          }}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        {invoice.callStatus === "active" && (
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                          </span>
+                        )}
+                        {invoice.callStatus === "completed" && (
+                          <span className="text-green-600">✓</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                          invoice.aiScore >= 90 ? "bg-green-100 text-green-700" :
+                          invoice.aiScore >= 75 ? "bg-yellow-100 text-yellow-700" :
+                          "bg-orange-100 text-orange-700"
+                        }`}>
+                          {invoice.aiScore}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-medium">{invoice.id}</td>
+                      <td className="px-4 py-3 text-sm">{invoice.vendor}</td>
+                      <td className="px-4 py-3 text-sm font-medium">${invoice.amount.toLocaleString()}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-sm font-medium ${
+                          invoice.daysOverdue > 20 ? "text-red-600" :
+                          invoice.daysOverdue > 10 ? "text-orange-600" :
+                          "text-yellow-600"
+                        }`}>
+                          {invoice.daysOverdue} days
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={invoice.status} />
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{invoice.lastAttempt}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{invoice.nextAction}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex space-x-2">
+                          <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                            Collect
+                          </button>
+                          <button className="text-gray-600 hover:text-gray-700 text-sm">
+                            Details
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
+        )}
 
-          {/* Recent Activity */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              {recentActivity.map((activity) => (
-                <ActivityItem key={activity.id} activity={activity} />
-              ))}
-            </div>
+        {/* Vendors Table */}
+        {activeTab === "vendors" && (
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Outstanding</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Days Late</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contactability</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Payment</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Channel</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {vendors.map((vendor) => (
+                  <tr key={vendor.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      {vendor.status === "active" && (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium">{vendor.name}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-red-600">
+                      ${vendor.outstanding.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{vendor.invoiceCount}</td>
+                    <td className="px-4 py-3 text-sm">{vendor.avgDaysLate} days</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        vendor.contactability === "High" ? "bg-green-100 text-green-700" :
+                        vendor.contactability === "Medium" ? "bg-yellow-100 text-yellow-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {vendor.contactability}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{vendor.lastPayment}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className="text-gray-600">
+                        {vendor.preferredChannel === "voice" ? "📞" : "📧"} {vendor.preferredChannel}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex space-x-2">
+                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                          Contact
+                        </button>
+                        <button className="text-gray-600 hover:text-gray-700 text-sm">
+                          History
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
 
-        {/* Collection Pipeline */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Collection Pipeline</h2>
+        {/* Payments Table */}
+        {activeTab === "payments" && (
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {payments.map((payment) => (
+                  <tr key={payment.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-600">{payment.timestamp}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={payment.status} type="payment" />
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium">{payment.vendor}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{payment.invoice}</td>
+                    <td className="px-4 py-3 text-sm font-medium">${payment.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{payment.method}</td>
+                    <td className="px-4 py-3">
+                      <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="p-6">
-            <div className="flex items-center justify-between space-x-4">
-              <PipelineStage
-                title="Queued"
-                count={8}
-                icon="📋"
-                color="bg-gray-100"
-              />
-              <div className="flex-shrink-0 w-8 h-0.5 bg-gray-300"></div>
-              <PipelineStage
-                title="Calling"
-                count={3}
-                icon="📞"
-                color="bg-blue-100"
-              />
-              <div className="flex-shrink-0 w-8 h-0.5 bg-gray-300"></div>
-              <PipelineStage
-                title="Negotiating"
-                count={2}
-                icon="🤝"
-                color="bg-yellow-100"
-              />
-              <div className="flex-shrink-0 w-8 h-0.5 bg-gray-300"></div>
-              <PipelineStage
-                title="Payment Sent"
-                count={5}
-                icon="📧"
-                color="bg-purple-100"
-              />
-              <div className="flex-shrink-0 w-8 h-0.5 bg-gray-300"></div>
-              <PipelineStage
-                title="Paid"
-                count={28}
-                icon="✅"
-                color="bg-green-100"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </AppLayout>
-  );
-}
-
-function MetricCard({ title, value, icon, trend, trendUp }: any) {
-  return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-2xl">{icon}</span>
-        <span className={`text-sm font-medium ${trendUp ? 'text-green-600' : 'text-red-600'}`}>
-          {trend}
-        </span>
-      </div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      <div className="text-sm text-gray-500 mt-1">{title}</div>
-    </div>
-  );
-}
-
-function ActiveCollectionCard({ collection }: any) {
-  const statusConfig = {
-    calling: { bg: "bg-blue-100", text: "text-blue-700", label: "Calling" },
-    negotiating: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Negotiating" },
-    sending_payment: { bg: "bg-purple-100", text: "text-purple-700", label: "Sending Payment" },
-  };
-
-  const config = statusConfig[collection.status as keyof typeof statusConfig];
-
-  return (
-    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-      <div className="flex items-center space-x-4">
-        <div className="relative">
-          <div className={`w-10 h-10 rounded-full ${config.bg} flex items-center justify-center`}>
-            <span>📞</span>
-          </div>
-          <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-          </span>
-        </div>
-        <div>
-          <div className="font-medium text-gray-900">{collection.vendorName}</div>
-          <div className="text-sm text-gray-500">${collection.amount.toLocaleString()}</div>
-        </div>
-      </div>
-      <div className="flex items-center space-x-3">
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
-          {config.label}
-        </span>
-        <span className="text-sm text-gray-500">{collection.duration}</span>
-        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-          View →
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ActivityItem({ activity }: any) {
-  const typeConfig = {
-    payment_received: { icon: "💰", color: "text-green-600" },
-    call_completed: { icon: "📞", color: "text-blue-600" },
-    email_sent: { icon: "📧", color: "text-purple-600" },
-  };
-
-  const config = typeConfig[activity.type as keyof typeof typeConfig];
-
-  return (
-    <div className="flex items-start space-x-3">
-      <span className={`text-lg ${config.color}`}>{config.icon}</span>
-      <div className="flex-1">
-        <div className="text-sm text-gray-900 font-medium">{activity.vendor}</div>
-        <div className="text-sm text-gray-500">
-          {activity.outcome || activity.action || `$${activity.amount?.toLocaleString()} received`}
-        </div>
-      </div>
-      <span className="text-xs text-gray-400">{activity.time}</span>
-    </div>
-  );
-}
-
-function PipelineStage({ title, count, icon, color }: any) {
-  return (
-    <div className="flex-1">
-      <div className={`${color} rounded-lg p-4 text-center`}>
-        <div className="text-2xl mb-2">{icon}</div>
-        <div className="text-2xl font-bold text-gray-900">{count}</div>
-        <div className="text-sm text-gray-600">{title}</div>
+        )}
       </div>
     </div>
   );
