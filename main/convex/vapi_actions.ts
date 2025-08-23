@@ -34,7 +34,7 @@ export const initiateCall = action({
     
     // Build the VAPI call request
     // Compute current datetime values for the assistant
-    const timeZone = "America/New_York";
+    const timeZone = "America/Los_Angeles";
     const now = new Date();
     const datetimeISO = now.toISOString();
     const datetimeHuman = new Intl.DateTimeFormat("en-US", {
