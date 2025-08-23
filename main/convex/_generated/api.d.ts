@@ -13,9 +13,12 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as activity from "../activity.js";
 import type * as agentmail from "../agentmail.js";
 import type * as attempts from "../attempts.js";
 import type * as auth from "../auth.js";
+import type * as autumn from "../autumn.js";
+import type * as callAssessment from "../callAssessment.js";
 import type * as collection from "../collection.js";
 import type * as dashboard from "../dashboard.js";
 import type * as debug from "../debug.js";
@@ -27,7 +30,9 @@ import type * as myFunctions from "../myFunctions.js";
 import type * as openai from "../openai.js";
 import type * as payments from "../payments.js";
 import type * as seed from "../seed.js";
+import type * as settlement from "../settlement.js";
 import type * as testEmail from "../testEmail.js";
+import type * as testExtraction from "../testExtraction.js";
 import type * as transcripts from "../transcripts.js";
 import type * as users from "../users.js";
 import type * as vapi from "../vapi.js";
@@ -46,9 +51,12 @@ import type * as vendors from "../vendors.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  activity: typeof activity;
   agentmail: typeof agentmail;
   attempts: typeof attempts;
   auth: typeof auth;
+  autumn: typeof autumn;
+  callAssessment: typeof callAssessment;
   collection: typeof collection;
   dashboard: typeof dashboard;
   debug: typeof debug;
@@ -60,7 +68,9 @@ declare const fullApi: ApiFromModules<{
   openai: typeof openai;
   payments: typeof payments;
   seed: typeof seed;
+  settlement: typeof settlement;
   testEmail: typeof testEmail;
+  testExtraction: typeof testExtraction;
   transcripts: typeof transcripts;
   users: typeof users;
   vapi: typeof vapi;
