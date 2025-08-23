@@ -20,8 +20,6 @@ export const vapiWebhook = httpAction(async (ctx, request) => {
       console.error("Unauthorized VAPI webhook attempt");
       return new Response("unauthorized", { status: 401 });
     }
-  } else {
-    console.log("VAPI webhook received (no auth required)");
   }
 
   // 2) Parse the request body
@@ -32,52 +30,96 @@ export const vapiWebhook = httpAction(async (ctx, request) => {
 
   const msg = body?.message;
   if (!msg?.type) {
-    console.log("No message type in VAPI webhook");
+    console.log("VAPI webhook - no message type, raw body:", JSON.stringify(body).slice(0, 200));
     return new Response(null, { status: 200 });
   }
 
-  const callId = msg.call?.id ?? "unknown";
+  const callId = msg.call?.id ?? msg.callId ?? "unknown";
   const timestamp = msg.timestamp ?? Date.now();
 
-  console.log(`VAPI webhook received: ${msg.type} for call ${callId}`);
+  console.log(`VAPI webhook: ${msg.type} for call ${callId}`);
+  
+  // Log more details for debugging
+  if (msg.type === "status-update") {
+    console.log(`Call status: ${msg.status}, reason: ${msg.endedReason || 'N/A'}`);
+  }
+  if (msg.type === "end-of-call-report") {
+    const duration = msg.call?.endedAt && msg.call?.startedAt 
+      ? Math.round((new Date(msg.call.endedAt).getTime() - new Date(msg.call.startedAt).getTime()) / 1000)
+      : msg.duration || 0;
+    console.log(`Call ended. Reason: ${msg.endedReason}, Duration: ${duration}s`);
+    if (msg.error) {
+      console.error(`Call error: ${msg.error}`);
+    }
+  }
 
   try {
     // Handle different VAPI event types
     switch (msg.type) {
       case "transcript":
       case 'transcript[transcriptType="final"]':
-        // Store transcript data
-        await ctx.runMutation(api.vapiTranscripts.insert, {
-          callId,
-          role: msg.role,
-          transcriptType: msg.transcriptType ?? "final",
-          text: msg.transcript,
-          timestamp,
-        });
+      case "transcript-final":
+        // VAPI sends transcript in msg.transcript and role in msg.role
+        const transcriptText = msg.transcript;
+        const transcriptRole = msg.role || "assistant";
+        
+        if (transcriptText) {
+          await ctx.runMutation(api.vapiTranscripts.insert, {
+            callId,
+            role: transcriptRole,
+            transcriptType: msg.transcriptType ?? "final",
+            text: transcriptText,
+            timestamp,
+          });
+          console.log(`✅ Stored transcript: [${transcriptRole}] ${transcriptText}`);
+        }
         break;
 
       case "end-of-call-report":
-        // Store end of call report
-        await ctx.runMutation(api.vapiCalls.upsertReport, {
+        // Store end of call report with all available data
+        const reportData: any = {
           callId,
-          artifact: msg.artifact,
-          endedReason: msg.endedReason,
           timestamp,
-          phoneNumber: msg.customer?.number,
-          assistantId: msg.assistant?.id,
-          recordingUrl: msg.recordingUrl,
-          stereoRecordingUrl: msg.stereoRecordingUrl,
-          cost: msg.cost,
-          costBreakdown: msg.costBreakdown,
-        });
+          endedReason: msg.endedReason,
+        };
+        
+        // Add optional fields if they exist
+        if (msg.artifact) reportData.artifact = msg.artifact;
+        if (msg.customer?.number) reportData.phoneNumber = msg.customer.number;
+        if (msg.assistant?.id) reportData.assistantId = msg.assistant.id;
+        if (msg.recordingUrl) reportData.recordingUrl = msg.recordingUrl;
+        if (msg.stereoRecordingUrl) reportData.stereoRecordingUrl = msg.stereoRecordingUrl;
+        if (msg.cost !== undefined) reportData.cost = msg.cost;
+        if (msg.costBreakdown) reportData.costBreakdown = msg.costBreakdown;
+        
+        await ctx.runMutation(api.vapiCalls.upsertReport, reportData);
 
         // Update vendor state if there's an associated vendor
-        if (msg.metadata?.vendorId) {
+        const metadata = msg.metadata || msg.assistant?.metadata;
+        if (metadata?.vendorId) {
           await ctx.runMutation(api.vendorState.updateFromCall, {
-            vendorId: msg.metadata.vendorId,
-            outcome: msg.endedReason,
+            vendorId: metadata.vendorId,
+            outcome: msg.endedReason || "completed",
             callId,
           });
+          
+          // Update invoice state based on call outcome
+          if (metadata.invoiceId && msg.endedReason === "assistant-ended-call") {
+            // Check if payment was promised in the transcript
+            const transcripts = msg.artifact?.messages || [];
+            const hasPaymentPromise = transcripts.some((t: any) => 
+              t.message?.toLowerCase().includes("payment") && 
+              t.message?.toLowerCase().includes("send")
+            );
+            
+            if (hasPaymentPromise) {
+              await ctx.runMutation(api.invoices.updateState, {
+                invoiceId: metadata.invoiceId,
+                state: "PromiseToPay",
+                memo: "Customer agreed to payment during call"
+              });
+            }
+          }
         }
         break;
 
@@ -93,38 +135,133 @@ export const vapiWebhook = httpAction(async (ctx, request) => {
       case "function-call":
         // Handle function calls from VAPI assistant
         const functionName = msg.functionCall?.name;
-        const functionArgs = msg.functionCall?.parameters;
+        const functionArgs = msg.functionCall?.parameters || {};
         
         console.log(`VAPI function call: ${functionName}`, functionArgs);
         
+        // Get metadata from the call
+        const callMetadata = msg.call?.assistantOverrides?.metadata || msg.metadata || {};
+        
         // Route to appropriate handler based on function name
-        let result = null;
+        let result: any = { success: false, message: "Unknown function" };
         
         switch (functionName) {
           case "send_payment_link":
-            result = await ctx.runMutation(api.payments.createPaymentLink, {
-              vendorId: functionArgs.vendorId,
-              invoiceId: functionArgs.invoiceId,
-              amountCents: functionArgs.amountCents,
-              email: functionArgs.email,
-            });
+            try {
+              // Create payment link
+              const paymentResult = await ctx.runMutation(api.payments.createPaymentLink, {
+                vendorId: callMetadata.vendorId || functionArgs.vendorId,
+                invoiceId: callMetadata.invoiceId || functionArgs.invoiceId,
+                amountCents: functionArgs.amountCents || callMetadata.invoiceAmountCents,
+                email: functionArgs.email || callMetadata.vendorEmail,
+              });
+              
+              // Send email with payment link (schedule as action)
+              await ctx.scheduler.runAfter(0, api.email.sendPaymentEmail, {
+                email: functionArgs.email || callMetadata.vendorEmail,
+                vendorName: callMetadata.vendorName || "Valued Customer",
+                invoiceNo: callMetadata.invoiceNo || "INV-001",
+                amount: functionArgs.amountCents || callMetadata.invoiceAmountCents,
+                paymentUrl: paymentResult.linkUrl,
+                discount: functionArgs.discount || 0,
+              });
+              
+              result = {
+                success: true,
+                message: "Payment link sent successfully",
+                paymentUrl: paymentResult.linkUrl
+              };
+            } catch (error: any) {
+              console.error("Error sending payment link:", error);
+              result = {
+                success: false,
+                message: "Failed to send payment link",
+                error: error.message
+              };
+            }
             break;
           
           case "schedule_callback":
-            result = await ctx.runMutation(api.vendorState.scheduleFollowUp, {
-              vendorId: functionArgs.vendorId,
-              followUpDate: functionArgs.date,
-              reason: functionArgs.reason,
-            });
+            try {
+              await ctx.runMutation(api.vendorState.scheduleFollowUp, {
+                vendorId: callMetadata.vendorId || functionArgs.vendorId,
+                followUpDate: functionArgs.date || functionArgs.followUpDate,
+                reason: functionArgs.reason || "Follow-up scheduled by AI",
+              });
+              
+              result = {
+                success: true,
+                message: `Callback scheduled for ${functionArgs.date}`
+              };
+            } catch (error: any) {
+              console.error("Error scheduling callback:", error);
+              result = {
+                success: false,
+                message: "Failed to schedule callback",
+                error: error.message
+              };
+            }
             break;
           
           case "update_invoice_state":
-            result = await ctx.runMutation(api.invoices.updateState, {
-              invoiceId: functionArgs.invoiceId,
-              state: functionArgs.state,
-              memo: functionArgs.memo,
-            });
+            try {
+              await ctx.runMutation(api.invoices.updateState, {
+                invoiceId: callMetadata.invoiceId || functionArgs.invoiceId,
+                state: functionArgs.state || "InProgress",
+                memo: functionArgs.memo || "Updated by AI during call",
+              });
+              
+              result = {
+                success: true,
+                message: `Invoice state updated to ${functionArgs.state}`
+              };
+            } catch (error: any) {
+              console.error("Error updating invoice state:", error);
+              result = {
+                success: false,
+                message: "Failed to update invoice state",
+                error: error.message
+              };
+            }
             break;
+            
+          case "get_payment_options":
+            // Provide payment options to the AI
+            const amountCents = callMetadata.invoiceAmountCents || 10000;
+            const fullAmount = amountCents / 100;
+            const discountAmount = fullAmount * 0.98; // 2% discount
+            const installmentAmount = fullAmount / 3;
+            
+            result = {
+              success: true,
+              options: [
+                {
+                  type: "full_payment_discount",
+                  amount: discountAmount,
+                  description: `Pay $${discountAmount.toFixed(2)} today (2% discount)`,
+                  savings: fullAmount - discountAmount
+                },
+                {
+                  type: "full_payment",
+                  amount: fullAmount,
+                  description: `Pay $${fullAmount.toFixed(2)} today`
+                },
+                {
+                  type: "installments",
+                  amount: installmentAmount,
+                  description: `3 monthly payments of $${installmentAmount.toFixed(2)}`,
+                  totalAmount: fullAmount
+                }
+              ]
+            };
+            break;
+            
+          default:
+            console.log(`Unknown function: ${functionName}`);
+            result = {
+              success: false,
+              message: `Unknown function: ${functionName}`
+            };
         }
         
         // Return function result to VAPI
@@ -136,17 +273,56 @@ export const vapiWebhook = httpAction(async (ctx, request) => {
       case "tool-calls":
         // Handle tool calls (similar to function calls but for external tools)
         console.log("VAPI tool calls:", msg.toolCalls);
-        break;
+        
+        // Process each tool call
+        const results = [];
+        for (const toolCall of msg.toolCalls || []) {
+          // Handle based on tool type
+          console.log(`Processing tool: ${toolCall.name || toolCall.type}`);
+          results.push({ success: true });
+        }
+        
+        return new Response(JSON.stringify({ results }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
 
       case "speech-update":
-        // Real-time speech updates (optional to store)
-        if (msg.role === "assistant") {
-          console.log("Assistant speech:", msg.transcript);
+        // Store real-time speech updates for live transcription
+        if (msg.transcript) {
+          await ctx.runMutation(api.vapiTranscripts.insert, {
+            callId,
+            role: msg.role || "assistant",
+            transcriptType: "speech",
+            text: msg.transcript,
+            timestamp,
+          });
+          console.log(`🎤 Live speech: [${msg.role}] ${msg.transcript}`);
+        }
+        break;
+        
+      case "conversation-update":
+        // VAPI sends messages in msg.conversation.messages array
+        const messages = msg.conversation?.messages || [];
+          
+        if (Array.isArray(messages) && messages.length > 0) {
+          // Only store the latest message to avoid duplicates
+          const latestMessage = messages[messages.length - 1];
+          if (latestMessage && latestMessage.content) {
+            await ctx.runMutation(api.vapiTranscripts.insert, {
+              callId,
+              role: latestMessage.role || "assistant",
+              transcriptType: "conversation",
+              text: latestMessage.content,
+              timestamp: latestMessage.timestamp || timestamp,
+            });
+            console.log(`✅ Stored conversation: [${latestMessage.role}] ${latestMessage.content}`);
+          }
         }
         break;
 
       default:
-        console.log(`Unhandled VAPI event type: ${msg.type}`);
+        console.log(`Unhandled VAPI event: ${msg.type}`);
     }
 
     return new Response(null, { status: 200 });

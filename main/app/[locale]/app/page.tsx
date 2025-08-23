@@ -34,12 +34,25 @@ const DashboardPage = () => {
 
   // Mutations
   const startCallMutation = useMutation(api.dashboard.startCall)
-  const initiateVapiCall = useAction(api.dashboard.initiateVapiCall)
+  
+  // Poll for the latest call to get the real call ID
+  const latestCall = useQuery(api.vapiCalls.listCalls, { limit: 1 })
+  
+  // Update activeCallId when we detect a new call
+  useEffect(() => {
+    if (activeCall && latestCall && latestCall.length > 0) {
+      const mostRecentCall = latestCall[0]
+      if (mostRecentCall.callId && mostRecentCall.callId !== activeCallId) {
+        console.log('Updated call ID to:', mostRecentCall.callId)
+        setActiveCallId(mostRecentCall.callId)
+      }
+    }
+  }, [latestCall, activeCall, activeCallId])
   
   // Subscribe to live transcripts when there's an active call
   const liveTranscripts = useQuery(
     api.vapiTranscripts.byCall, 
-    activeCallId ? { callId: activeCallId } : "skip"
+    activeCallId && !activeCallId.startsWith('temp-') ? { callId: activeCallId } : "skip"
   )
 
   useEffect(() => {
@@ -94,33 +107,20 @@ const DashboardPage = () => {
     ])
     
     try {
-      // Get vendor and invoice details for the call
-      const vendor = vendors.find((v: any) => v._id === vendorId)
-      const invoice = invoices.find((i: any) => i.vendorId === vendorId && i.state === 'Overdue')
-      
-      if (!vendor || !invoice) {
-        throw new Error('Missing vendor or invoice data')
-      }
+      // Use the mutation which handles the VAPI call internally
+      const result = await startCallMutation({ vendorId: vendorId as any })
 
-      // Initiate the actual VAPI call
-      const result = await initiateVapiCall({
-        vendorId: vendorId,
-        vendorName: vendor.name,
-        vendorEmail: vendor.contactEmail || 'ap@vendor.com',
-        vendorPhone: vendor.contactPhone,
-        invoiceNo: invoice.invoiceNo,
-        invoiceAmountCents: invoice.amountCents,
-        invoiceDueDate: invoice.dueDateISO,
-        companyName: 'TechFlow Solutions' // You can make this dynamic based on user settings
-      })
-
-      if (result.success && result.callId) {
-        setActiveCallId(result.callId) // This will trigger transcript subscription
+      if (result.success) {
         setTranscript(prev => [...prev, 
-          { speaker: 'agent', text: `Call initiated. Call ID: ${result.callId}` }
+          { speaker: 'agent', text: result.message || 'Call initiated successfully' }
         ])
+        // Set the call ID if returned
+        if (result.callId) {
+          setActiveCallId(result.callId)
+          console.log('Call ID set:', result.callId)
+        }
       } else {
-        throw new Error(result.error || 'Failed to initiate call')
+        throw new Error('Failed to initiate call')
       }
     } catch (error) {
       console.error('Failed to start call:', error)

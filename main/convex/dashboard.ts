@@ -176,66 +176,37 @@ export const startCall = mutation({
   args: { vendorId: v.id("vendors") },
   returns: v.object({ 
     success: v.boolean(),
-    callId: v.optional(v.string())
+    callId: v.optional(v.string()),
+    message: v.optional(v.string())
   }),
   handler: async (ctx, args) => {
-    const appUser = await getOrCreateAppUser(ctx);
-    if (!appUser) throw new Error("User not found");
-    
-    // Get vendor and invoice details
+    // Simple approach - just get the vendor and any invoice
     const vendor = await ctx.db.get(args.vendorId);
     if (!vendor) throw new Error("Vendor not found");
     
-    // For demo: Just get any overdue invoice since auth is not properly linked
-    let invoice = await ctx.db
+    // Get first invoice for this vendor
+    const invoice = await ctx.db
       .query("invoices")
       .filter((q) => q.eq(q.field("vendorId"), args.vendorId))
       .first();
     
     if (!invoice) {
-      // Just grab the first overdue invoice for demo purposes
-      invoice = await ctx.db
-        .query("invoices")
-        .filter((q) => q.eq(q.field("state"), "Overdue"))
-        .first();
-      
-      if (!invoice) {
-        throw new Error("No invoice found for demo");
-      }
+      throw new Error("No invoice found for vendor");
     }
     
-    // Update vendor state to track the call attempt
-    const vendorState = await ctx.db
-      .query("vendor_state")
-      .withIndex("by_vendor", (q) => q.eq("vendorId", args.vendorId))
-      .unique();
+    // Use direct VAPI integration - no Flask needed!
+    const phoneNumber = vendor.contactPhone || "+15625212896"; // Default demo number
     
-    if (vendorState) {
-      await ctx.db.patch(vendorState._id, {
-        lastAttemptAt: Date.now(),
-        attemptsThisWeek: vendorState.attemptsThisWeek + 1,
-        updatedAt: Date.now(),
-      });
-    } else {
-      await ctx.db.insert("vendor_state", {
-        userId: appUser._id,
-        vendorId: args.vendorId,
-        historicalMode: null,
-        attemptsThisWeek: 1,
-        lastAttemptAt: Date.now(),
-        totalRecoveredCents: 0,
-        totalOutstandingCents: invoice.amountCents - invoice.paidCents,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-    }
+    // Generate a temporary call ID that we can track
+    const tempCallId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Schedule the action to make the actual call
-    await ctx.scheduler.runAfter(0, api.dashboard.initiateVapiCall, {
+    // Schedule the VAPI call and pass the temp ID
+    await ctx.scheduler.runAfter(0, api.vapi_actions.initiateCall, {
+      phoneNumber: phoneNumber,
       vendorId: args.vendorId,
+      invoiceId: invoice._id,
       vendorName: vendor.name,
       vendorEmail: vendor.contactEmail || "ap@vendor.com",
-      vendorPhone: vendor.contactPhone || undefined,  // Pass undefined if no phone
       invoiceNo: invoice.invoiceNo,
       invoiceAmountCents: invoice.amountCents,
       invoiceDueDate: invoice.dueDateISO,
@@ -244,7 +215,8 @@ export const startCall = mutation({
     
     return { 
       success: true,
-      callId: undefined // We can't get the call ID synchronously when scheduling
+      callId: tempCallId, // Return temp ID for now
+      message: `Initiating call to ${vendor.name} at ${phoneNumber}`
     };
   },
 });
@@ -450,64 +422,4 @@ export const getOverdueInvoices = query({
   },
 });
 
-// Action to call the Flask API
-export const initiateVapiCall = action({
-  args: {
-    vendorId: v.id("vendors"),
-    vendorName: v.string(),
-    vendorEmail: v.string(),
-    vendorPhone: v.optional(v.string()),
-    invoiceNo: v.string(),
-    invoiceAmountCents: v.number(),
-    invoiceDueDate: v.string(),
-    companyName: v.string(),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    callId: v.optional(v.string()),
-    error: v.optional(v.string())
-  }),
-  handler: async (ctx, args) => {
-    // Call the Flask API server via Tailscale funnel
-    const API_URL = process.env.VAPI_API_URL || "https://darins-macbook-pro.tail4869a0.ts.net";
-    
-    try {
-      const response = await fetch(`${API_URL}/api/initiate-call`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phoneNumber: args.vendorPhone || "+17657469771", // Use test number if no vendor phone
-          vendorId: args.vendorId,
-          vendorName: args.vendorName,
-          vendorEmail: args.vendorEmail,
-          invoiceNo: args.invoiceNo,
-          invoiceAmountCents: args.invoiceAmountCents,
-          invoiceDueDate: args.invoiceDueDate,
-          companyName: args.companyName,
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API call failed: ${response.status} - ${errorText}`);
-      }
-      
-      const data = await response.json();
-      
-      return {
-        success: data.success,
-        callId: data.callId,
-        error: data.error
-      };
-    } catch (error: any) {
-      console.error("Failed to initiate Vapi call:", error);
-      return {
-        success: false,
-        callId: undefined,
-        error: error.message || "Failed to initiate call"
-      };
-    }
-  },
-});
+// Removed Flask API action - now using direct VAPI integration in voice/vapi.ts

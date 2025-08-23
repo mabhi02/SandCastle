@@ -2,6 +2,46 @@ import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
+export const create = mutation({
+  args: {
+    callId: v.string(),
+    status: v.string(),
+    phoneNumber: v.optional(v.string()),
+    assistantId: v.optional(v.string()),
+    createdAt: v.number(),
+  },
+  returns: v.id("vapi_calls"),
+  handler: async (ctx, args) => {
+    // Check if call already exists
+    const existing = await ctx.db
+      .query("vapi_calls")
+      .withIndex("by_callId", (q) => q.eq("callId", args.callId))
+      .unique();
+
+    if (existing) {
+      // Update existing record
+      await ctx.db.patch(existing._id, {
+        status: args.status,
+        phoneNumber: args.phoneNumber || existing.phoneNumber,
+        assistantId: args.assistantId || existing.assistantId,
+        updatedAt: Date.now(),
+      });
+      return existing._id;
+    } else {
+      // Create new record
+      return await ctx.db.insert("vapi_calls", {
+        callId: args.callId,
+        status: args.status,
+        phoneNumber: args.phoneNumber,
+        assistantId: args.assistantId,
+        startedAt: args.createdAt,
+        createdAt: args.createdAt,
+        updatedAt: args.createdAt,
+      });
+    }
+  },
+});
+
 export const upsertReport = mutation({
   args: {
     callId: v.string(),
@@ -161,82 +201,32 @@ export const listCalls = query({
   },
 });
 
-// Action to initiate a VAPI call through the Python API server
-export const initiateCall = action({
-  args: {
-    phoneNumber: v.string(),
-    vendorId: v.optional(v.id("vendors")),
-    invoiceId: v.optional(v.id("invoices")),
-    invoiceNo: v.string(),
-    invoiceAmountCents: v.number(),
-    invoiceDueDate: v.string(),
-    vendorName: v.string(),
-    vendorEmail: v.string(),
-    companyName: v.optional(v.string()),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    callId: v.optional(v.string()),
-    status: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    try {
-      // Call the Python API server to initiate VAPI call
-      const response = await fetch("http://localhost:5001/api/initiate-call", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phoneNumber: args.phoneNumber,
-          vendorId: args.vendorId,
-          vendorName: args.vendorName,
-          vendorEmail: args.vendorEmail,
-          invoiceNo: args.invoiceNo,
-          invoiceAmountCents: args.invoiceAmountCents,
-          invoiceDueDate: args.invoiceDueDate,
-          companyName: args.companyName ?? "TechFlow Solutions",
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API call failed: ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-
-      // Store the call initiation in our database
-      if (result.success && result.callId) {
-        await ctx.runMutation(api.vapiCalls.updateStatus, {
-          callId: result.callId,
-          status: result.status ?? "initiated",
-          timestamp: Date.now(),
-        });
-
-        // Update vendor state if we have a vendor
-        if (args.vendorId) {
-          await ctx.runMutation(api.vendorState.updateFromCall, {
-            vendorId: args.vendorId,
-            outcome: "initiated",
-            callId: result.callId,
-          });
-        }
-      }
-
-      return {
-        success: result.success,
-        callId: result.callId,
-        status: result.status,
-        error: result.error,
-      };
-    } catch (error) {
-      console.error("Error initiating VAPI call:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
+// Get the latest call for a specific phone number
+export const getLatestCallForPhone = query({
+  args: { phoneNumber: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("vapi_calls"),
+      callId: v.string(),
+      status: v.string(),
+      startedAt: v.optional(v.number()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, { phoneNumber }) => {
+    const call = await ctx.db
+      .query("vapi_calls")
+      .withIndex("by_phone", (q) => q.eq("phoneNumber", phoneNumber))
+      .order("desc")
+      .first();
+    
+    if (!call) return null;
+    
+    return {
+      _id: call._id,
+      callId: call.callId,
+      status: call.status,
+      startedAt: call.startedAt,
+    };
   },
 });
