@@ -1,0 +1,21 @@
+{
+    "name": "agentmail-ts",
+    "version": "1.0.0",
+    "private": true,
+    "main": "dist/index.js",
+    "scripts": {
+      "dev": "ts-node src/example.ts",
+      "build": "tsc",
+      "start": "node dist/example.js"
+    },
+    "dependencies": {
+      "agentmail": "^0.0.54",
+      "dotenv": "^16.4.5"
+    },
+    "devDependencies": {
+      "@types/node": "^22.5.4",
+      "ts-node": "^10.9.2",
+      "typescript": "^5.5.4"
+    }
+  }
+  
