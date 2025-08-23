@@ -1,5 +1,24 @@
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+
+export const updateVendorPhones = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    // Update all vendors to have a valid phone number for testing
+    const vendors = await ctx.db.query("vendors").collect();
+    
+    for (const vendor of vendors) {
+      await ctx.db.patch(vendor._id, {
+        contactPhone: "+15625212896", // Valid test phone number
+        updatedAt: Date.now(),
+      });
+    }
+    
+    console.log(`Updated ${vendors.length} vendors with valid phone number`);
+    return null;
+  },
+});
 
 export const checkData = query({
   args: {},

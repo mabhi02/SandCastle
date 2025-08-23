@@ -6,7 +6,7 @@ import styles from '@/components/utils/home.module.scss'
 import dashStyles from '@/components/utils/dashboard.module.scss'
 import { getSession, clearSession } from '@/components/utils/auth'
 import { Socials } from '@/components/nav/Socials'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation, useQuery, useAction } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 
 const DashboardPage = () => {
@@ -15,6 +15,7 @@ const DashboardPage = () => {
   const [hasMounted, setHasMounted] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [activeCall, setActiveCall] = useState<string | null>(null)
+  const [activeCallId, setActiveCallId] = useState<string | null>(null)
   const [transcript, setTranscript] = useState<Array<{speaker: string, text: string}>>([])
 
   // Convex queries
@@ -32,7 +33,13 @@ const DashboardPage = () => {
 
   // Mutations
   const startCallMutation = useMutation(api.dashboard.startCall)
-  const sendEmailMutation = useMutation(api.dashboard.sendEmail)
+  const initiateVapiCall = useAction(api.dashboard.initiateVapiCall)
+  
+  // Subscribe to live transcripts when there's an active call
+  const liveTranscripts = useQuery(
+    api.vapiTranscripts.byCall, 
+    activeCallId ? { callId: activeCallId } : "skip"
+  )
 
   useEffect(() => {
     setHasMounted(true)
@@ -41,6 +48,17 @@ const DashboardPage = () => {
       return
     }
   }, [router, session])
+
+  // Update transcript when live transcripts change
+  useEffect(() => {
+    if (liveTranscripts && liveTranscripts.length > 0) {
+      const formattedTranscripts = liveTranscripts.map((t: any) => ({
+        speaker: t.role === 'assistant' ? 'agent' : 'vendor',
+        text: t.text
+      }))
+      setTranscript(formattedTranscripts)
+    }
+  }, [liveTranscripts])
 
   function logout() {
     clearSession()
@@ -69,32 +87,50 @@ const DashboardPage = () => {
 
   const handleStartCall = async (vendorId: string, vendorName: string) => {
     setActiveCall(vendorId)
+    setActiveCallId(null) // Reset previous call ID
     setTranscript([
       { speaker: 'agent', text: `Initiating call to ${vendorName}...` }
     ])
     
     try {
-      await startCallMutation({ vendorId })
-      // Simulate transcript updates
-      setTimeout(() => {
+      // Get vendor and invoice details for the call
+      const vendor = vendors.find((v: any) => v._id === vendorId)
+      const invoice = invoices.find((i: any) => i.vendorId === vendorId && i.state === 'Overdue')
+      
+      if (!vendor || !invoice) {
+        throw new Error('Missing vendor or invoice data')
+      }
+
+      // Initiate the actual VAPI call
+      const result = await initiateVapiCall({
+        vendorId: vendorId,
+        vendorName: vendor.name,
+        vendorEmail: vendor.contactEmail || 'ap@vendor.com',
+        vendorPhone: vendor.contactPhone,
+        invoiceNo: invoice.invoiceNo,
+        invoiceAmountCents: invoice.amountCents,
+        invoiceDueDate: invoice.dueDateISO,
+        companyName: 'TechFlow Solutions' // You can make this dynamic based on user settings
+      })
+
+      if (result.success && result.callId) {
+        setActiveCallId(result.callId) // This will trigger transcript subscription
         setTranscript(prev => [...prev, 
-          { speaker: 'vendor', text: "Hello, this is accounts payable." },
-          { speaker: 'agent', text: "Hi, I'm calling about your overdue invoice..." }
+          { speaker: 'agent', text: `Call initiated. Call ID: ${result.callId}` }
         ])
-      }, 2000)
+      } else {
+        throw new Error(result.error || 'Failed to initiate call')
+      }
     } catch (error) {
       console.error('Failed to start call:', error)
+      setTranscript(prev => [...prev, 
+        { speaker: 'agent', text: `Error: ${error instanceof Error ? error.message : 'Failed to start call'}` }
+      ])
       setActiveCall(null)
+      setActiveCallId(null)
     }
   }
 
-  const handleSendEmail = async (vendorId: string, vendorName: string) => {
-    try {
-      await sendEmailMutation({ vendorId })
-    } catch (error) {
-      console.error('Failed to send email:', error)
-    }
-  }
 
   const getVendorState = (vendorId: string) => {
     return vendorStates.find((vs: any) => vs.vendorId === vendorId)
@@ -111,7 +147,6 @@ const DashboardPage = () => {
         <section className={dashStyles.wrapper}>
           <div className={dashStyles.headerRow}>
             <h1 className={dashStyles.pageTitle}>
-              <span className={dashStyles.icon}>🏰</span>
               Sandcastle Collection Agent
             </h1>
             <div className={dashStyles.headerActions}>
@@ -170,7 +205,7 @@ const DashboardPage = () => {
               <div className={dashStyles.tableHeader}>
                 <div className={dashStyles.tableTitle}>Outstanding Invoices</div>
                 <div className={dashStyles.actionButtons}>
-                  <button className={dashStyles.headerBtn}>🚀 Auto-Dial Queue</button>
+                  <button className={dashStyles.headerBtn}>Auto-Dial Queue</button>
                 </div>
               </div>
               
@@ -256,13 +291,7 @@ const DashboardPage = () => {
                               onClick={() => handleStartCall(invoice.vendorId, vendor?.name || 'Vendor')}
                               disabled={vendor?.doNotCall}
                             >
-                              {activeCall === invoice.vendorId ? '📞 Calling...' : '📞 Call'}
-                            </button>
-                            <button 
-                              className={`${dashStyles.actionBtn} ${dashStyles.emailBtn}`}
-                              onClick={() => handleSendEmail(invoice.vendorId, vendor?.name || 'Vendor')}
-                            >
-                              ✉️ Email
+                              {activeCall === invoice.vendorId ? 'Calling...' : 'Call'}
                             </button>
                           </div>
                         </td>

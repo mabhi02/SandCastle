@@ -1,6 +1,7 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
 import { getOrCreateAppUser } from "./users";
+import { api } from "./_generated/api";
 
 const invoiceState = v.union(
   v.literal("Overdue"),
@@ -173,10 +174,35 @@ export const getStats = query({
 
 export const startCall = mutation({
   args: { vendorId: v.id("vendors") },
-  returns: v.object({ success: v.boolean() }),
+  returns: v.object({ 
+    success: v.boolean(),
+    callId: v.optional(v.string())
+  }),
   handler: async (ctx, args) => {
     const appUser = await getOrCreateAppUser(ctx);
     if (!appUser) throw new Error("User not found");
+    
+    // Get vendor and invoice details
+    const vendor = await ctx.db.get(args.vendorId);
+    if (!vendor) throw new Error("Vendor not found");
+    
+    // For demo: Just get any overdue invoice since auth is not properly linked
+    let invoice = await ctx.db
+      .query("invoices")
+      .filter((q) => q.eq(q.field("vendorId"), args.vendorId))
+      .first();
+    
+    if (!invoice) {
+      // Just grab the first overdue invoice for demo purposes
+      invoice = await ctx.db
+        .query("invoices")
+        .filter((q) => q.eq(q.field("state"), "Overdue"))
+        .first();
+      
+      if (!invoice) {
+        throw new Error("No invoice found for demo");
+      }
+    }
     
     // Update vendor state to track the call attempt
     const vendorState = await ctx.db
@@ -198,13 +224,28 @@ export const startCall = mutation({
         attemptsThisWeek: 1,
         lastAttemptAt: Date.now(),
         totalRecoveredCents: 0,
-        totalOutstandingCents: 0,
+        totalOutstandingCents: invoice.amountCents - invoice.paidCents,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
     }
     
-    return { success: true };
+    // Schedule the action to make the actual call
+    await ctx.scheduler.runAfter(0, api.dashboard.initiateVapiCall, {
+      vendorId: args.vendorId,
+      vendorName: vendor.name,
+      vendorEmail: vendor.contactEmail || "ap@vendor.com",
+      vendorPhone: vendor.contactPhone || undefined,  // Pass undefined if no phone
+      invoiceNo: invoice.invoiceNo,
+      invoiceAmountCents: invoice.amountCents,
+      invoiceDueDate: invoice.dueDateISO,
+      companyName: "TechFlow Solutions"
+    });
+    
+    return { 
+      success: true,
+      callId: undefined // We can't get the call ID synchronously when scheduling
+    };
   },
 });
 
@@ -406,5 +447,67 @@ export const getOverdueInvoices = query({
     );
 
     return enriched.sort((a, b) => b.daysLate - a.daysLate);
+  },
+});
+
+// Action to call the Flask API
+export const initiateVapiCall = action({
+  args: {
+    vendorId: v.id("vendors"),
+    vendorName: v.string(),
+    vendorEmail: v.string(),
+    vendorPhone: v.optional(v.string()),
+    invoiceNo: v.string(),
+    invoiceAmountCents: v.number(),
+    invoiceDueDate: v.string(),
+    companyName: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    callId: v.optional(v.string()),
+    error: v.optional(v.string())
+  }),
+  handler: async (ctx, args) => {
+    // Call the Flask API server via Tailscale funnel
+    const API_URL = process.env.VAPI_API_URL || "https://darins-macbook-pro.tail4869a0.ts.net";
+    
+    try {
+      const response = await fetch(`${API_URL}/api/initiate-call`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber: args.vendorPhone || "+17657469771", // Use test number if no vendor phone
+          vendorId: args.vendorId,
+          vendorName: args.vendorName,
+          vendorEmail: args.vendorEmail,
+          invoiceNo: args.invoiceNo,
+          invoiceAmountCents: args.invoiceAmountCents,
+          invoiceDueDate: args.invoiceDueDate,
+          companyName: args.companyName,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API call failed: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      
+      return {
+        success: data.success,
+        callId: data.callId,
+        error: data.error
+      };
+    } catch (error: any) {
+      console.error("Failed to initiate Vapi call:", error);
+      return {
+        success: false,
+        callId: undefined,
+        error: error.message || "Failed to initiate call"
+      };
+    }
   },
 });

@@ -196,4 +196,38 @@ export default defineSchema({
   })
     .index("by_run_ts", ["runId", "ts"]) 
     .index("by_run_tool_ts", ["runId", "tool", "ts"]),
+
+  // 8) VAPI TRANSCRIPTS (real-time call transcripts)
+  vapi_transcripts: defineTable({
+    callId: v.string(),
+    role: v.string(),
+    transcriptType: v.string(),
+    text: v.string(),
+    timestamp: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_call", ["callId"])
+    .index("by_call_timestamp", ["callId", "timestamp"]),
+
+  // 9) VAPI CALLS (call metadata and reports)
+  vapi_calls: defineTable({
+    callId: v.string(),
+    status: v.string(),
+    artifact: v.optional(v.any()),
+    endedReason: v.optional(v.string()),
+    startedAt: v.optional(v.number()),
+    endedAt: v.optional(v.number()),
+    phoneNumber: v.optional(v.string()),
+    assistantId: v.optional(v.string()),
+    recordingUrl: v.optional(v.string()),
+    stereoRecordingUrl: v.optional(v.string()),
+    cost: v.optional(v.number()),
+    costBreakdown: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_callId", ["callId"])
+    .index("by_phone", ["phoneNumber"])
+    .index("by_status", ["status"])
+    .index("by_created", ["createdAt"]),
 });
