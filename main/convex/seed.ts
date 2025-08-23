@@ -25,7 +25,7 @@ export const seedData = internalMutation({
       authUserId: "seed_user_001",
       email: "test@example.com",
       companyName: "Test Company",
-      timezone: "America/New_York",
+      timezone: "America/Los_Angeles",
       currency: "USD",
       
       // Negotiation defaults (in basis points)

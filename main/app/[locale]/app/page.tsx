@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SideBar } from '@/components/nav/SideBar'
 import styles from '@/components/utils/home.module.scss'
@@ -17,7 +17,8 @@ const DashboardPage = () => {
   const [profileOpen, setProfileOpen] = useState(false)
   const [activeCall, setActiveCall] = useState<string | null>(null)
   const [activeCallId, setActiveCallId] = useState<string | null>(null)
-  const [transcript, setTranscript] = useState<Array<{speaker: string, text: string}>>([])
+  const [transcript, setTranscript] = useState<Array<{speaker: string, text: string, timestamp?: number}>>([])
+  const transcriptRef = useRef<HTMLDivElement | null>(null)
 
   // Convex queries
   const invoices = useQuery(api.dashboard.getInvoices) || []
@@ -68,11 +69,19 @@ const DashboardPage = () => {
     if (liveTranscripts && liveTranscripts.length > 0) {
       const formattedTranscripts = liveTranscripts.map((t: any) => ({
         speaker: t.role === 'assistant' ? 'agent' : 'vendor',
-        text: t.text
+        text: t.text,
+        timestamp: t.timestamp || t._creationTime
       }))
       setTranscript(formattedTranscripts)
     }
   }, [liveTranscripts])
+
+  // Auto-scroll transcript to bottom on update
+  useEffect(() => {
+    if (transcriptRef.current) {
+      transcriptRef.current.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: 'smooth' })
+    }
+  }, [transcript])
 
   function logout() {
     clearSession()
@@ -84,6 +93,15 @@ const DashboardPage = () => {
       style: 'currency',
       currency: 'USD'
     }).format(cents / 100)
+  }
+
+  const formatTime = (ms?: number) => {
+    if (!ms) return ''
+    try {
+      return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } catch {
+      return ''
+    }
   }
 
   const getStateClass = (state: string) => {
@@ -320,18 +338,34 @@ const DashboardPage = () => {
                     <span>{activeCall ? 'Connected' : 'Ready'}</span>
                   </div>
                 </div>
-                <div className={dashStyles.transcriptArea}>
+                <div className={dashStyles.transcriptArea} ref={transcriptRef}>
                   {transcript.length === 0 ? (
-                    <div className={dashStyles.transcriptLine}>
-                      <strong>Agent:</strong> Standing by for next call...
+                    <div className={`${dashStyles.messageRow} ${dashStyles.agent}`}>
+                      <div className={dashStyles.avatar}>A</div>
+                      <div className={dashStyles.message}>
+                        <div className={dashStyles.messageMeta}>
+                          <span className={dashStyles.name}>Agent</span>
+                          <span className={dashStyles.time}></span>
+                        </div>
+                        <div className={dashStyles.messageText}>Standing by for next call...</div>
+                      </div>
                     </div>
                   ) : (
                     transcript.map((line, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`${dashStyles.transcriptLine} ${dashStyles[`${line.speaker}Line`]}`}
+                      <div
+                        key={idx}
+                        className={`${dashStyles.messageRow} ${line.speaker === 'agent' ? dashStyles.agent : dashStyles.vendor}`}
                       >
-                        <strong>{line.speaker === 'agent' ? 'Agent' : 'Vendor'}:</strong> {line.text}
+                        <div className={dashStyles.avatar}>{line.speaker === 'agent' ? 'A' : 'V'}</div>
+                        <div className={dashStyles.message}>
+                          <div className={dashStyles.messageMeta}>
+                            <span className={dashStyles.name}>{line.speaker === 'agent' ? 'Agent' : 'Vendor'}</span>
+                            {line.timestamp && (
+                              <span className={dashStyles.time}>{formatTime(line.timestamp)}</span>
+                            )}
+                          </div>
+                          <div className={dashStyles.messageText}>{line.text}</div>
+                        </div>
                       </div>
                     ))
                   )}

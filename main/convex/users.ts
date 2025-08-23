@@ -32,7 +32,7 @@ export async function getOrCreateAppUser(ctx: QueryCtx | MutationCtx) {
         authUserId: "demo_user",
         email: "demo@sandcastle.ai",
         companyName: "Demo Company",
-        timezone: "America/New_York",
+        timezone: "America/Los_Angeles",
         currency: "USD",
         globalMinPctBps: 2500,
         maxInstallments: 6,
@@ -66,7 +66,7 @@ export async function getOrCreateAppUser(ctx: QueryCtx | MutationCtx) {
       authUserId: authUser._id,
       email: (authUser as any).email || "user@example.com",
       companyName: (authUser as any).name || "User Company",
-      timezone: "America/New_York",
+      timezone: "America/Los_Angeles",
       currency: "USD",
       globalMinPctBps: 2500,
       maxInstallments: 6,
@@ -168,4 +168,3 @@ export const getAppUserById = query({
     };
   },
 });
-
