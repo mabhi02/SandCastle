@@ -13,6 +13,13 @@ const invoiceState = v.union(
   v.literal("DNC")
 );
 
+export const getById = query({
+  args: { id: v.id("invoices") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
 export const updateState = mutation({
   args: {
     invoiceId: v.id("invoices"),
@@ -96,32 +103,6 @@ export const updatePayment = mutation({
     }
 
     return null;
-  },
-});
-
-export const get = query({
-  args: { id: v.id("invoices") },
-  returns: v.union(
-    v.object({
-      _id: v.id("invoices"),
-      _creationTime: v.number(),
-      userId: v.id("app_users"),
-      vendorId: v.id("vendors"),
-      invoiceNo: v.string(),
-      amountCents: v.number(),
-      dueDateISO: v.string(),
-      state: invoiceState,
-      promiseDateISO: v.optional(v.string()),
-      paidCents: v.number(),
-      lastStateChangeAt: v.number(),
-      memo: v.optional(v.string()),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    }),
-    v.null()
-  ),
-  handler: async (ctx, { id }) => {
-    return await ctx.db.get(id);
   },
 });
 

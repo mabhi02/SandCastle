@@ -209,7 +209,18 @@ export default defineSchema({
     .index("by_call", ["callId"])
     .index("by_call_timestamp", ["callId", "timestamp"]),
 
-  // 9) VAPI CALLS (call metadata and reports)
+  // 9) ACTIVITY (real-time activity feed)
+  activity: defineTable({
+    userId: v.id("app_users"),
+    type: v.string(), // "call_assessment", "payment_received", "email_sent", etc.
+    description: v.string(),
+    metadata: v.optional(v.any()),
+    at: v.number(),
+  })
+    .index("by_user_time", ["userId", "at"])
+    .index("by_type", ["type"]),
+
+  // 10) VAPI CALLS (call metadata and reports)
   vapi_calls: defineTable({
     callId: v.string(),
     status: v.string(),
@@ -230,4 +241,22 @@ export default defineSchema({
     .index("by_phone", ["phoneNumber"])
     .index("by_status", ["status"])
     .index("by_created", ["createdAt"]),
+
+  // 11) SETTLEMENT PROPOSALS (live negotiation during calls)
+  settlement_proposals: defineTable({
+    callId: v.string(),
+    vendorId: v.id("vendors"),
+    invoiceId: v.id("invoices"),
+    proposedCents: v.number(),
+    discountPct: v.number(),
+    savingsCents: v.number(),
+    meetsMinimum: v.boolean(),
+    accepted: v.boolean(),
+    acceptedAt: v.optional(v.number()),
+    paymentLinkUrl: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_call", ["callId"])
+    .index("by_vendor", ["vendorId"])
+    .index("by_accepted", ["accepted"]),
 });

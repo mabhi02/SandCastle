@@ -4,3 +4,6 @@ We're building an AI agent that automatically collects overdue invoices for busi
 
 Please read @.cursor/convex_rules.mdc .
 
+
+- this is for a hackathon that is shipping in literally 3 hours.
+- please check if things compile via convex and build in nextjs as testing after any of your changes. really important that both of these work.

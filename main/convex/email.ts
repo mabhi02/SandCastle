@@ -302,19 +302,47 @@ export const sendPostCallEmail = action({
           callAssessment = assessmentResult;
           console.log(`📊 Call assessment:`, assessmentResult);
 
-          // Update database with assessment results
-          // Omit nextFollowUpDate when it is null to satisfy v.optional(v.string())
+          // Sanitize nullable fields to satisfy Convex validators
+          const sanitizedNextFollowUp =
+            typeof assessmentResult.nextFollowUpDate === "string" &&
+            assessmentResult.nextFollowUpDate.toLowerCase() !== "null" &&
+            assessmentResult.nextFollowUpDate.trim() !== ""
+              ? assessmentResult.nextFollowUpDate
+              : undefined;
+
+          const sanitizedPromisedAmount =
+            typeof assessmentResult.promisedAmount === "number"
+              ? assessmentResult.promisedAmount
+              : extractedAmount;
+
+          const sanitizedRemainingDebt =
+            typeof assessmentResult.remainingDebt === "number"
+              ? assessmentResult.remainingDebt
+              : undefined;
+
+          const sanitizedSummary =
+            typeof assessmentResult.summary === "string" &&
+            assessmentResult.summary.toLowerCase() !== "null" &&
+            assessmentResult.summary.trim() !== ""
+              ? assessmentResult.summary
+              : undefined;
+
+          // Update database with assessment results (omit undefined fields)
           await ctx.runMutation(api.callAssessment.updateAfterCall, {
             vendorId: args.vendorId,
             invoiceId: primaryInvoice?._id,
             callStatus: assessmentResult.callStatus || "unsuccessful",
             paymentStatus: assessmentResult.paymentStatus || "no_payment",
-            promisedAmount: assessmentResult.promisedAmount || extractedAmount,
-            remainingDebt: assessmentResult.remainingDebt,
-            ...(assessmentResult.nextFollowUpDate != null
-              ? { nextFollowUpDate: assessmentResult.nextFollowUpDate }
+            ...(sanitizedPromisedAmount != null
+              ? { promisedAmount: sanitizedPromisedAmount }
               : {}),
-            summary: assessmentResult.summary,
+            ...(sanitizedRemainingDebt != null
+              ? { remainingDebt: sanitizedRemainingDebt }
+              : {}),
+            ...(sanitizedNextFollowUp != null
+              ? { nextFollowUpDate: sanitizedNextFollowUp }
+              : {}),
+            ...(sanitizedSummary != null ? { summary: sanitizedSummary } : {}),
           });
         }
       }

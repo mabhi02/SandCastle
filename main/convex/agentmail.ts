@@ -1,5 +1,68 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
+
+/**
+ * Create an AgentMail inbox for demo/testing purposes
+ */
+export const createDemoInbox = action({
+  args: {},
+  handler: async (ctx) => {
+    try {
+      const apiKey = process.env.AGENTMAIL_API_KEY;
+      if (!apiKey) {
+        throw new Error('AGENTMAIL_API_KEY is not set');
+      }
+
+      // Create a demo inbox with a deterministic client_id
+      const clientId = 'sandcastle-demo-inbox';
+      const username = 'sandcastle-collections';
+      
+      const response = await fetch('https://api.agentmail.to/v0/inboxes', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          domain: 'agentmail.to',
+          display_name: 'SandCastle Collections',
+          client_id: clientId
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        // If it's a 409 conflict, the inbox already exists (which is fine)
+        if (response.status === 409) {
+          console.log('Demo inbox already exists');
+          return {
+            success: true,
+            inbox_id: `${username}@agentmail.to`,
+            message: 'Demo inbox already exists'
+          };
+        }
+        throw new Error(`Failed to create inbox: ${response.status} - ${error}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Created demo inbox:', result.inbox_id);
+      
+      return {
+        success: true,
+        inbox_id: result.inbox_id,
+        message: 'Demo inbox created successfully'
+      };
+    } catch (error: any) {
+      console.error('Failed to create demo inbox:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+});
 
 /**
  * Send an email via AgentMail service
@@ -25,15 +88,19 @@ export const sendEmail = action({
       const text = looksHtml ? args.content.replace(/<[^>]+>/g, '') : args.content;
       const html = looksHtml ? args.content : `<p>${escapeHtml(args.content)}</p>`;
 
-      // Make API call to AgentMail
-      const response = await fetch('https://api.agentmail.to/v1/inboxes/messages', {
+      // Use the demo inbox we created
+      // The inbox_id is the full email address like "sandcastleyc-5c8e21@agentmail.to"
+      const DEMO_INBOX_ID = "sandcastleyc-5c8e21@agentmail.to";
+      
+      // Make API call to AgentMail to send message from inbox
+      // The SDK uses v0 API and /messages/send endpoint
+      const response = await fetch(`https://api.agentmail.to/v0/inboxes/${encodeURIComponent(DEMO_INBOX_ID)}/messages/send`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          inbox_id: args.fromInbox,
           to: [args.toEmail],
           subject: args.subject,
           text,

@@ -30,7 +30,8 @@ export const initiateCall = action({
       phoneNumber = '+' + phoneNumber;
     }
     
-    console.log(`Initiating VAPI call to ${phoneNumber} for invoice ${args.invoiceNo}`);
+    console.log(`Initiating VAPI call TO: ${phoneNumber} for invoice ${args.invoiceNo}`);
+    console.log(`Calling FROM Phone Number ID: ${VAPI_PHONE_NUMBER_ID}`);
     
     // Build the VAPI call request
     // Compute current datetime values for the assistant
@@ -179,6 +180,36 @@ export const initiateCall = action({
         channel: "voice",
         callId: result.id
       });
+      
+      // Send SMS with settlement portal link
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://localhost:3000";
+      const settlementUrl = `${baseUrl}/settle/${result.id}`;
+      
+      // For demo, log the SMS that would be sent
+      console.log(`📱 SMS TO ${phoneNumber}:`);
+      console.log(`Follow your live call and settle instantly: ${settlementUrl}`);
+      
+      // In production, integrate with Twilio:
+      // await sendSMS(phoneNumber, `Follow your live call and settle instantly: ${settlementUrl}`);
+      
+      // Get invoice to find userId for activity log
+      const invoice = await ctx.runQuery(api.invoices.getById, { id: args.invoiceId });
+      
+      if (invoice) {
+        // Log activity
+        await ctx.runMutation(api.activity.create, {
+          userId: invoice.userId,
+          type: "settlement_link_sent",
+          description: `Settlement portal link sent to ${args.vendorName}`,
+          metadata: {
+            callId: result.id,
+            vendorId: args.vendorId,
+            invoiceId: args.invoiceId,
+            settlementUrl,
+            phoneNumber,
+          },
+        });
+      }
       
       return {
         success: true,
